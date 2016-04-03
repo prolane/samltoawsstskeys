@@ -3,7 +3,7 @@
   "author": "G.T.C. Laan (gtclaan.com)",
   "homepage_url": "https://github.com/gtclaancom/samltoawsstskeys",
   "name": "SAML to AWS STS Keys Conversion",
-  "description": "This extension picks up the SAML assertion when logging in to the AWS Webconsole using ADFS. Using the SAML assertion STS Keys are requested using the assumeRoleWithSAML API action.",
+  "description": "Generates file with AWS STS Keys after logging in to AWS webconsole using SSO (SAML 2.0). It leverages 'assumeRoleWithSAML' API.",
   "version": "1.0",
   "icons": {  "16": "icons/icon_16.png",
               "32": "icons/icon_32.png",
