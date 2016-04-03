@@ -1,0 +1,22 @@
+{
+  "manifest_version": 2,
+
+  "name": "SAML to AWS STS Keys Conversion",
+  "description": "This extension picks up the SAML assertion when logging in to the AWS Webconsole using ADFS. Using the SAML assertion STS Keys are requested using the assumeRoleWithSAML API action.",
+  "version": "1.0",
+
+  "browser_action": {
+    "default_icon": "icons/icon.png",
+    "default_popup": "popup/popup.html"
+  },
+  "background": {
+    "page": "background/background.html"
+  },
+  "options_page": "options/options.html",
+  "permissions": [
+    "webRequest",
+    "https://signin.aws.amazon.com/saml",
+    "storage",
+    "downloads"
+  ]
+}
