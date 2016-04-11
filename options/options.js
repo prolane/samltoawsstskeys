@@ -1,12 +1,8 @@
 // Saves options to chrome.storage
 function save_options() {
-  var PrincipalArn = document.getElementById('PrincipalArn').value;
-  var RoleArn = document.getElementById('RoleArn').value;
   var FileName = document.getElementById('FileName').value;
 
   chrome.storage.sync.set({
-    PrincipalArn: PrincipalArn,
-    RoleArn: RoleArn,
     FileName: FileName
   }, function() {
     // Update status to let user know options were saved.
@@ -27,12 +23,8 @@ function save_options() {
 function restore_options() {
   // Default values
   chrome.storage.sync.get({
-    PrincipalArn: 'arn:aws:iam::123456789123:saml-provider/my-adfs',
-    RoleArn: 'arn:aws:iam::123456789123:role/EC2Admin',
     FileName: 'credentials.txt'
   }, function(items) {
-    document.getElementById('PrincipalArn').value = items.PrincipalArn;
-    document.getElementById('RoleArn').value = items.RoleArn;
     document.getElementById('FileName').value = items.FileName;
   });
 }
