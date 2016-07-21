@@ -58,8 +58,8 @@ function onBeforeRequestEvent(details) {
       var nodeValue = roleDomNodes[i].innerHTML;
       if (nodeValue.indexOf(details.requestBody.formData.roleIndex[0]) > -1) {
         // This DomNode holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
-        PrincipalArn = nodeValue.substring(0, nodeValue.indexOf(','));
-        RoleArn = nodeValue.substring(nodeValue.indexOf(',') + 1);
+      	 RoleArn = nodeValue.substring(0, nodeValue.indexOf(','));
+         PrincipalArn = nodeValue.substring(nodeValue.indexOf(',') + 1);
         assumeRoleWithSAML(PrincipalArn, RoleArn, SAMLAssertion);
       }
     }
@@ -67,8 +67,8 @@ function onBeforeRequestEvent(details) {
   // If there is just 1 role in the claim there will be no 'roleIndex' in the form data.
   else if (roleDomNodes.length == 1) {
     // When there is just 1 role in the claim, use these details for the assumeRoleWithSAML API call
-    PrincipalArn = roleDomNodes[0].substring(0, roleDomNodes[0].indexOf(','));
-    RoleArn = roleDomNodes[0].substring(roleDomNodes[0].indexOf(',') + 1);
+  	 RoleArn = roleDomNodes[0].substring(0, roleDomNodes[0].indexOf(','));
+     PrincipalArn = roleDomNodes[0].substring(roleDomNodes[0].indexOf(',') + 1);
     assumeRoleWithSAML(PrincipalArn, RoleArn, SAMLAssertion);
   }
 }
