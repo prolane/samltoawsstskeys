@@ -58,45 +58,55 @@ function onBeforeRequestEvent(details) {
       var nodeValue = roleDomNodes[i].innerHTML;
       if (nodeValue.indexOf(details.requestBody.formData.roleIndex[0]) > -1) {
         // This DomNode holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
-        PrincipalArn = nodeValue.substring(0, nodeValue.indexOf(','));
-        RoleArn = nodeValue.substring(nodeValue.indexOf(',') + 1);
-        assumeRoleWithSAML(PrincipalArn, RoleArn, SAMLAssertion);
+		// The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
+		extractPrincipalPlusRoleAndAssumeRole(nodeValue, details.requestBody.formData.SAMLResponse[0])
       }
     }
   }
   // If there is just 1 role in the claim there will be no 'roleIndex' in the form data.
   else if (roleDomNodes.length == 1) {
     // When there is just 1 role in the claim, use these details for the assumeRoleWithSAML API call
-    PrincipalArn = roleDomNodes[0].substring(0, roleDomNodes[0].indexOf(','));
-    RoleArn = roleDomNodes[0].substring(roleDomNodes[0].indexOf(',') + 1);
-    assumeRoleWithSAML(PrincipalArn, RoleArn, SAMLAssertion);
+	// The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
+	extractPrincipalPlusRoleAndAssumeRole(roleDomNodes[0].innerHTML, details.requestBody.formData.SAMLResponse[0])
   }
 }
 
 
-// Function called from onBeforeRequestEvent when SAMLProvider, Role and SAMLAssertion is available
-function assumeRoleWithSAML(PrincipalArn, RoleArn, SAMLAssertion) {
-  // Set parameters needed for assumeRoleWithSAML method
-  var params = {
-    PrincipalArn: PrincipalArn,
-    RoleArn: RoleArn,
-    SAMLAssertion: SAMLAssertion,
-  };
-  // Call STS API from AWS
-  var sts = new AWS.STS();
-  sts.assumeRoleWithSAML(params, function(err, data) {
-    if (err) console.log(err, err.stack); // an error occurred
-    else {
-      // On succesful API response create file with the STS keys
-      let docContent = "[default] \n" +
-        "aws_access_key_id = " + data.Credentials.AccessKeyId + " \n" +
-        "aws_secret_access_key = " + data.Credentials.SecretAccessKey + " \n" +
-        "aws_session_token = " + data.Credentials.SessionToken;
-      let doc = URL.createObjectURL( new Blob([docContent], {type: 'application/octet-binary'}) );
-      // Triggers download of the generated file
-      chrome.downloads.download({ url: doc, filename: FileName, conflictAction: 'overwrite', saveAs: false });
-    }        
-  });
+
+// Called from 'onBeforeRequestEvent' function.
+// Gets a Role Attribute from a SAMLAssertion as function argument. Gets the SAMLAssertion as a second argument.
+// This function extracts the RoleArn and PrincipalArn (SAML-provider)
+// from this argument and uses it to call the AWS STS assumeRoleWithSAML API.
+function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion) {
+	// Pattern for Role
+	var reRole = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
+	// Patern for Principal (SAML Provider)
+	var rePrincipal = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
+	// Extraxt both regex patterns from SAMLAssertion attribute
+	RoleArn = samlattribute.match(reRole)[0];
+	PrincipalArn = samlattribute.match(rePrincipal)[0];
+    
+	// Set parameters needed for assumeRoleWithSAML method
+	var params = {
+		PrincipalArn: PrincipalArn,
+		RoleArn: RoleArn,
+		SAMLAssertion: SAMLAssertion,
+	};
+	// Call STS API from AWS
+	var sts = new AWS.STS();
+	sts.assumeRoleWithSAML(params, function(err, data) {
+		if (err) console.log(err, err.stack); // an error occurred
+		else {
+			// On succesful API response create file with the STS keys
+			let docContent = "[default] \n" +
+			"aws_access_key_id = " + data.Credentials.AccessKeyId + " \n" +
+			"aws_secret_access_key = " + data.Credentials.SecretAccessKey + " \n" +
+			"aws_session_token = " + data.Credentials.SessionToken;
+			let doc = URL.createObjectURL( new Blob([docContent], {type: 'application/octet-binary'}) );
+			// Triggers download of the generated file
+			chrome.downloads.download({ url: doc, filename: FileName, conflictAction: 'overwrite', saveAs: false });
+		}        
+	});
 }
 
 
