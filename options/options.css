@@ -1,0 +1,54 @@
+div {
+	padding: 1em;
+}
+
+.inline-div {
+	padding: 0em;
+}
+
+#divTitle {
+  display: flex;
+}
+
+#divHeader {
+	margin-left: 10px;
+}
+
+#divSettings {
+	width: 900px;
+	border-style: solid;
+    border-radius: 10px;
+	background-color: #fef6e0;
+}
+
+.setting-part {
+	width: 876px;
+	border-radius: 10px;
+	background-color: #f1c47b;
+	margin-bottom: 14px;
+}
+
+label {
+	font-weight: bold;
+	font-family: "Segoe UI", Tahoma, sans-serif;
+    font-size: 100%;
+	display:inline-block;
+	margin-bottom: 5px;
+}
+
+#role_arns {
+	margin-top: 14px;
+}
+
+#status {
+	height: 15px;
+	margin-bottom: 5px;
+}
+
+#divSave {
+	padding-top: 0em;
+}
+
+#divChangelog {
+	width: 600px;
+}
