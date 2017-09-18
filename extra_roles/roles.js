@@ -226,7 +226,7 @@
            var rolename = document.extraRoles[role].split("/").pop();
            K.push({displayName: role, roleName: rolename, accountId: accid, formattedAccountId: accid, mfaNeeded: false});
         }
-        for(x in K){
+        for(var x=0; x< K.length; x++ ){
             K[x].roleColor = intToRGB(hashCode(K[x].displayName));
         }
         AWSC.jQuery(AWSC).trigger(
