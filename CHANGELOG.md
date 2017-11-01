@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2017-nov-01 (v2.1)
-* Bug fix: Chrome 62 broke the extension. Special thanks for [Brice](https://github.com/bdruth) for contributing. Thanks to [Gijs](hhttps://gitlab.com/gbvanrenswoude) for helping out with testing.
+* Bug fix: Chrome 62 broke the extension. Special thanks for [Brice](https://github.com/bdruth) for contributing. Thanks to [Gijs](https://gitlab.com/gbvanrenswoude) for helping out with testing.
 
 ## 2016-nov-21 (v2.0)
 * Added functionality to specify Role ARN's in the options panel. This is meant for cross-account assume-role API calls. For each specified role temporary credentials will be fetched and added to the credentials file.
