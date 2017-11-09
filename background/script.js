@@ -52,7 +52,23 @@ function removeOnBeforeRequestEventListener() {
 // This function runs on each request to https://signin.aws.amazon.com/saml
 function onBeforeRequestEvent(details) {
   // Decode base64 SAML assertion in the request
-  var samlXmlDoc = decodeURIComponent(unescape(window.atob(details.requestBody.formData.SAMLResponse[0])));
+  var samlXmlDoc = "";
+  var formDataPayload = undefined;
+  if (details.requestBody.formData) {
+    samlXmlDoc = decodeURIComponent(unescape(window.atob(details.requestBody.formData.SAMLResponse[0])));
+  } else if (details.requestBody.raw) {
+    var combined = new ArrayBuffer(0);
+    details.requestBody.raw.forEach(function(element) { 
+      var tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength); 
+      tmp.set( new Uint8Array(combined), 0 ); 
+      tmp.set( new Uint8Array(element.bytes),combined.byteLength ); 
+      combined = tmp.buffer;
+    });
+    var combinedView = new DataView(combined);
+    var decoder = new TextDecoder('utf-8');
+    formDataPayload = new URLSearchParams(decoder.decode(combinedView));
+    samlXmlDoc = decodeURIComponent(unescape(window.atob(formDataPayload.get('SAMLResponse'))))
+  }
   // Convert XML String to DOM
   parser = new DOMParser()
   domDoc = parser.parseFromString(samlXmlDoc, "text/xml");
@@ -61,15 +77,26 @@ function onBeforeRequestEvent(details) {
   // Parse the PrincipalArn and the RoleArn from the SAML Assertion.
   var PrincipalArn = '';
   var RoleArn = '';
-  var SAMLAssertion = details.requestBody.formData.SAMLResponse[0];
+  var SAMLAssertion = undefined;
+  var hasRoleIndex = false;
+  var roleIndex = "";
+  if (details.requestBody.formData) {
+    SAMLAssertion = details.requestBody.formData.SAMLResponse[0];
+    hasRoleIndex = "roleIndex" in details.requestBody.formData;
+    roleIndex = details.requestBody.formData.roleIndex[0];
+  } else if (formDataPayload) {
+    SAMLAssertion = formDataPayload.get('SAMLResponse');
+    roleIndex = formDataPayload.get('roleIndex');
+    hasRoleIndex = roleIndex != undefined;
+  }
    // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter to determine the role to assume
-  if (roleDomNodes.length > 1 && "roleIndex" in details.requestBody.formData) {
+  if (roleDomNodes.length > 1 && hasRoleIndex) {
     for (i = 0; i < roleDomNodes.length; i++) { 
       var nodeValue = roleDomNodes[i].innerHTML;
-      if (nodeValue.indexOf(details.requestBody.formData.roleIndex[0]) > -1) {
+      if (nodeValue.indexOf(roleIndex) > -1) {
         // This DomNode holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
 		// The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-		extractPrincipalPlusRoleAndAssumeRole(nodeValue, details.requestBody.formData.SAMLResponse[0])
+		extractPrincipalPlusRoleAndAssumeRole(nodeValue, SAMLAssertion)
       }
     }
   }
@@ -77,7 +104,7 @@ function onBeforeRequestEvent(details) {
   else if (roleDomNodes.length == 1) {
     // When there is just 1 role in the claim, use these details for the assumeRoleWithSAML API call
 	// The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-	extractPrincipalPlusRoleAndAssumeRole(roleDomNodes[0].innerHTML, details.requestBody.formData.SAMLResponse[0])
+	extractPrincipalPlusRoleAndAssumeRole(roleDomNodes[0].innerHTML, SAMLAssertion)
   }
 }
 
