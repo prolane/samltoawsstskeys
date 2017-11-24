@@ -6,15 +6,15 @@ div {
   padding: 0em;
 }
 
-#divTitle {
+.header {
   display: flex;
 }
 
-#divHeader {
+.header-title {
   margin-left: 10px;
 }
 
-#divSettings {
+.settings {
   width: 900px;
   border-style: solid;
   border-radius: 10px;
@@ -36,19 +36,19 @@ label {
   margin-bottom: 5px;
 }
 
-#role_arns {
+.roles {
   margin-top: 14px;
 }
 
-#status {
+.status {
   height: 15px;
   margin-bottom: 5px;
 }
 
-#divSave {
+.save {
   padding-top: 0em;
 }
 
-#divChangelog {
+.changelog {
   width: 600px;
 }
