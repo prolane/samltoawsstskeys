@@ -24,11 +24,11 @@ function chkboxChangeHandler(event) {
   // Save checkbox state to chrome.storage
   chrome.storage.sync.set({ Activated: checkbox.checked });
   // Default action for background process
-  var action = "removeWebRequestEventListener";
+  var action = 'removeWebRequestEventListener';
   // If the checkbox is checked, an EventListener needs to be started for
   // webRequests to signin.aws.amazon.com in the background process
   if (checkbox.checked) {
-    action = "addWebRequestEventListener";
+    action = 'addWebRequestEventListener';
   }
   chrome.runtime.sendMessage({action: action}, function(response) {
     console.log(response.message);

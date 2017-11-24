@@ -6,9 +6,9 @@ function save_options() {
   // Get the Role_ARN's (Profile/ARNs pairs) entered by the user in the table
   var RoleArns = {};
   // Iterate over all added profiles in the list
-  $("input[id^='profile_']").each(function( index ) {
+  $('input[id^=\'profile_\']').each(function() {
     // Replace profile_<rowId> for arn_<rowId> to be able to get value of corresponding arn input field
-    var input_id_arn = $(this).attr('id').replace("profile", "arn");
+    var input_id_arn = $(this).attr('id').replace('profile', 'arn');
     // Create key-value pair to add to RoleArns dictionary.
     // Only add it to the dict if both profile and arn are not an empty string
     if ($(this).val() != '' && $('#' + input_id_arn).val() != '') {
@@ -19,7 +19,7 @@ function save_options() {
   // Do the actual saving into Chrome storage
   chrome.storage.sync.set({
     FileName: FileName,
-  RoleArns: RoleArns
+    RoleArns: RoleArns
   }, function() {
     // Show 'Options saved' message to let user know options were saved.
     var status = document.getElementById('status');
@@ -30,7 +30,7 @@ function save_options() {
   });
 
   // Notify background process of changed storage items.
-  chrome.runtime.sendMessage({action: "reloadStorageItems"}, function(response) {
+  chrome.runtime.sendMessage({action: 'reloadStorageItems'}, function(response) {
     console.log(response.message);
   });
 }
@@ -38,24 +38,24 @@ function save_options() {
 // Restores state using the preferences stored in chrome.storage.
 function restore_options() {
   chrome.storage.sync.get({
-  // Default values
+    // Default values
     FileName: 'credentials',
-  RoleArns: {}
+    RoleArns: {}
   }, function(items) {
-  // Set filename
+    // Set filename
     document.getElementById('FileName').value = items.FileName;
-  // Set the html for the Role ARN's Table
-  $("#role_arns").html('<table><tr id="tr_header"><th>Profile</th><th>ARN of the role</th><th></th><th></th></tr></table>');
-  // For each profile/ARN pair add table row (showing the profile-name and ARN)
-  for (var profile in items.RoleArns){
-    if (items.RoleArns.hasOwnProperty(profile)) {
-      addTableRow('#tr_header', profile, items.RoleArns[profile]);
+    // Set the html for the Role ARN's Table
+    $('#role_arns').html('<table><tr id="tr_header"><th>Profile</th><th>ARN of the role</th><th></th><th></th></tr></table>');
+    // For each profile/ARN pair add table row (showing the profile-name and ARN)
+    for (var profile in items.RoleArns) {
+      if (items.RoleArns.hasOwnProperty(profile)) {
+        addTableRow('#tr_header', profile, items.RoleArns[profile]);
+      }
     }
-  }
-  // Add a blank table row if there are now current entries (So the user can easily add a new profile/ARN pair)
-  if (Object.keys(items.RoleArns).length == 0) {
-    addTableRow('#role_arns table tr:last', null, null);
-  }
+    // Add a blank table row if there are now current entries (So the user can easily add a new profile/ARN pair)
+    if (Object.keys(items.RoleArns).length == 0) {
+      addTableRow('#role_arns table tr:last', null, null);
+    }
   });
 }
 
@@ -65,10 +65,10 @@ function addTableRow(previousRowJquerySelector, profile, arn) {
   var newRowId = randomId();
   $(previousRowJquerySelector).after(getTableRowHtml(newRowId, profile, arn));
   // Add eventHandlers for the newly added buttons
-  $('#btn_add_' + newRowId).on("click", function() {
+  $('#btn_add_' + newRowId).on('click', function() {
     addTableRow('#tr_' + newRowId, null, null);
   });
-  $('#btn_del_' + newRowId).on("click", function() {
+  $('#btn_del_' + newRowId).on('click', function() {
     delTableRow('#tr_' + newRowId);
   });
 }
@@ -84,8 +84,8 @@ function getTableRowHtml(tableRowId, profile, arn) {
   var profileValue = '';
   var arnValue = '';
   // If profile and arn are not NULL, generate HTML value attribute
-  if (profile) {profileValue = 'value="' + profile + '"'};
-  if (arn) {arnValue = 'value="' + arn + '"'};
+  if (profile) {profileValue = 'value="' + profile + '"';}
+  if (arn) {arnValue = 'value="' + arn + '"';}
   // Generate HTML for the row
   var html =  '<tr id="tr_' + tableRowId + '">\
         <th><input type="text" id="profile_' + tableRowId + '" size="18" ' + profileValue + '></th> \
