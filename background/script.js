@@ -2,7 +2,7 @@
 var FileName = 'credentials';
 var RoleArns = {};
 
-// When this background process starts, load variables from chrome storage 
+// When this background process starts, load variables from chrome storage
 // from saved Extension Options
 loadItemsFromStorage();
 // Additionaly on start of the background process it is checked if this extension can be activated
@@ -58,10 +58,10 @@ function onBeforeRequestEvent(details) {
     samlXmlDoc = decodeURIComponent(unescape(window.atob(details.requestBody.formData.SAMLResponse[0])));
   } else if (details.requestBody.raw) {
     var combined = new ArrayBuffer(0);
-    details.requestBody.raw.forEach(function(element) { 
-      var tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength); 
-      tmp.set( new Uint8Array(combined), 0 ); 
-      tmp.set( new Uint8Array(element.bytes),combined.byteLength ); 
+    details.requestBody.raw.forEach(function(element) {
+      var tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength);
+      tmp.set( new Uint8Array(combined), 0 );
+      tmp.set( new Uint8Array(element.bytes),combined.byteLength );
       combined = tmp.buffer;
     });
     var combinedView = new DataView(combined);
@@ -91,7 +91,7 @@ function onBeforeRequestEvent(details) {
   }
    // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter to determine the role to assume
   if (roleDomNodes.length > 1 && hasRoleIndex) {
-    for (i = 0; i < roleDomNodes.length; i++) { 
+    for (i = 0; i < roleDomNodes.length; i++) {
       var nodeValue = roleDomNodes[i].innerHTML;
       if (nodeValue.indexOf(roleIndex) > -1) {
         // This DomNode holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
@@ -122,7 +122,7 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion) {
 	// Extraxt both regex patterns from SAMLAssertion attribute
 	RoleArn = samlattribute.match(reRole)[0];
 	PrincipalArn = samlattribute.match(rePrincipal)[0];
-    
+
 	// Set parameters needed for assumeRoleWithSAML method
 	var params = {
 		PrincipalArn: PrincipalArn,
@@ -150,7 +150,7 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion) {
 				console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[0]]);
 				assumeAdditionalRole(profileList, 0, data.Credentials.AccessKeyId, data.Credentials.SecretAccessKey, data.Credentials.SessionToken, docContent);
 			}
-		}        
+		}
 	});
 }
 
@@ -190,7 +190,7 @@ function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, 
 
 
 // Called from either extractPrincipalPlusRoleAndAssumeRole (if RoleArns dict is empty)
-// Otherwise called from assumeAdditionalRole as soon as all roles from RoleArns have been assumed 
+// Otherwise called from assumeAdditionalRole as soon as all roles from RoleArns have been assumed
 function outputDocAsDownload(docContent) {
 	var doc = URL.createObjectURL( new Blob([docContent], {type: 'application/octet-binary'}) );
 	// Triggers download of the generated file

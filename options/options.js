@@ -2,11 +2,11 @@
 function save_options() {
   // Get the filename to be saved
   var FileName = document.getElementById('FileName').value;
-  
+
   // Get the Role_ARN's (Profile/ARNs pairs) entered by the user in the table
   var RoleArns = {};
   // Iterate over all added profiles in the list
-  $("input[id^='profile_']").each(function( index ) {  
+  $("input[id^='profile_']").each(function( index ) {
 	  // Replace profile_<rowId> for arn_<rowId> to be able to get value of corresponding arn input field
 	  var input_id_arn = $(this).attr('id').replace("profile", "arn");
 	  // Create key-value pair to add to RoleArns dictionary.
@@ -15,7 +15,7 @@ function save_options() {
 		  RoleArns[$(this).val()] = $('#' + input_id_arn).val();
 	  }
   });
-  
+
   // Do the actual saving into Chrome storage
   chrome.storage.sync.set({
     FileName: FileName,
