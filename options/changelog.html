@@ -1,62 +1,62 @@
 <!doctype html>
 <html>
   <head>
-	<script src="../lib/jquery-3.1.1.min.js"></script>
-	<link rel="stylesheet" type="text/css" href="options.css">
+  <script src="../lib/jquery-3.1.1.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="options.css">
     <title>Changelog for 'SAML to AWS STS Keys Converter'</title>
   </head>
   <body>
-	<div id="divTitle">
-		<div id="divIcon" class="inline-div"><img src="../icons/icon_128.png" alt="Icon" height="50" width="50"></div>
-		<div id="divHeader" class="inline-div"><h2>Changelog for 'SAML to AWS STS Keys Converter'</h2></div>
-	</div>
-	<hr>
+  <div id="divTitle">
+    <div id="divIcon" class="inline-div"><img src="../icons/icon_128.png" alt="Icon" height="50" width="50"></div>
+    <div id="divHeader" class="inline-div"><h2>Changelog for 'SAML to AWS STS Keys Converter'</h2></div>
+  </div>
+  <hr>
 
-	<div id="divInfo">
-		<p>Developed by prolane.org (Gerard Laan)</p>
-		<p>For help, please see README at the <a href="https://github.com/prolane/samltoawsstskeys/blob/master/README.md" target="_blank">project page on Github.com</a></p>
-		<p>Click <a href="options.html" target="_blank">here</a> to open the options panel for this plugin.</p>
-	</div>
-	<hr>
+  <div id="divInfo">
+    <p>Developed by prolane.org (Gerard Laan)</p>
+    <p>For help, please see README at the <a href="https://github.com/prolane/samltoawsstskeys/blob/master/README.md" target="_blank">project page on Github.com</a></p>
+    <p>Click <a href="options.html" target="_blank">here</a> to open the options panel for this plugin.</p>
+  </div>
+  <hr>
 
-	<div id="divChangelog">
-		<h3>2017-nov-01<br>v2.1</h3>
-		<ul>
-			<li>Bug fix: Chrome 62 broke the extension. Special thanks for <a href="https://github.com/bdruth" target="_blank">Brice</a> for contributing. Thanks to <a href="https://gitlab.com/gbvanrenswoude" target="_blank">Gijs</a> for helping out with testing.</li>
-		</ul>
-		<br />
-		<br />
+  <div id="divChangelog">
+    <h3>2017-nov-01<br>v2.1</h3>
+    <ul>
+      <li>Bug fix: Chrome 62 broke the extension. Special thanks for <a href="https://github.com/bdruth" target="_blank">Brice</a> for contributing. Thanks to <a href="https://gitlab.com/gbvanrenswoude" target="_blank">Gijs</a> for helping out with testing.</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2016-nov-21<br>v2.0</h3>
-		<ul>
-			<li>Added functionality to specify Role ARN's in the options panel. This is meant for cross-account assume-role API calls. For each specified role temporary credentials will be fetched and added to the credentials file.</li>
-			<li>Updated 'AWS SDK for Javascript' library to latest version</li>
-			<li>Plugin now shows changelog to the user after the installation of new version</li>
-			<li>Options panel has a new look to improve readability</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2016-nov-21<br>v2.0</h3>
+    <ul>
+      <li>Added functionality to specify Role ARN's in the options panel. This is meant for cross-account assume-role API calls. For each specified role temporary credentials will be fetched and added to the credentials file.</li>
+      <li>Updated 'AWS SDK for Javascript' library to latest version</li>
+      <li>Plugin now shows changelog to the user after the installation of new version</li>
+      <li>Options panel has a new look to improve readability</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2016-jul-24<br>v1.2</h3>
-		<ul>
-			<li>Bug fix: when just 1 role in the SAML Assertion available now also works well</li>
-			<li>Now uses a regex to extract Role and Principal from SAML Assertion. This way it does not matter in what order the IDP adds the Role and Principle to the SAML Assertion.</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2016-jul-24<br>v1.2</h3>
+    <ul>
+      <li>Bug fix: when just 1 role in the SAML Assertion available now also works well</li>
+      <li>Now uses a regex to extract Role and Principal from SAML Assertion. This way it does not matter in what order the IDP adds the Role and Principle to the SAML Assertion.</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2016-apr-11<br>v1.1</h3>
-		<ul>
-			<li>Improved usability. No longer needed to manually specify PrincipalArn and RoleArn in options panel. Removed these options from the options panel. PrincipalArn and RoleArn is now parsed from the SAML Assertion itself.</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2016-apr-11<br>v1.1</h3>
+    <ul>
+      <li>Improved usability. No longer needed to manually specify PrincipalArn and RoleArn in options panel. Removed these options from the options panel. PrincipalArn and RoleArn is now parsed from the SAML Assertion itself.</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2016-apr-04<br>v1.0</h3>
-		<ul>
-			<li>Initial release</li>
-		</ul>
+    <h3>2016-apr-04<br>v1.0</h3>
+    <ul>
+      <li>Initial release</li>
+    </ul>
 
-	</div>
+  </div>
   </body>
 </html>
