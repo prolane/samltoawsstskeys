@@ -8,7 +8,8 @@
         "ArrayBuffer": true,
         "Uint8Array": true,
         "DataView": true,
-        "AWS": true
+        "AWS": true,
+        "Promise": true
     },
     "extends": "eslint:recommended",
     "rules": {

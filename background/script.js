@@ -1,232 +1,233 @@
 // Global variables
-var FileName = 'credentials';
-var RoleArns = {};
+var filename = 'credentials';
+var roles = {};
 
 // When this background process starts, load variables from chrome storage
 // from saved Extension Options
-loadItemsFromStorage();
+load_items_from_storage();
+
 // Additionaly on start of the background process it is checked if this extension can be activated
 chrome.storage.sync.get({
   // The default is activated
   Activated: true
 }, function(item) {
-  if (item.Activated) addOnBeforeRequestEventListener();
+  if (item.Activated) {
+    add_request_listener();
+  }
 });
+
 // Additionaly on start of the background process it is checked if a new version of the plugin is installed.
 // If so, show the user the changelog
 // var thisVersion = chrome.runtime.getManifest().version;
 chrome.runtime.onInstalled.addListener(function(details) {
-  if (details.reason == 'install' || details.reason == 'update') {
+  if (details.reason === 'install' || details.reason === 'update') {
     // Open a new tab to show changelog html page
     chrome.tabs.create({url: '../options/changelog.html'});
   }
 });
 
-
-
 // Function to be called when this extension is activated.
 // This adds an EventListener for each request to signin.aws.amazon.com
-function addOnBeforeRequestEventListener() {
-  if (chrome.webRequest.onBeforeRequest.hasListener(onBeforeRequestEvent)) {
+function add_request_listener() {
+  if (chrome.webRequest.onBeforeRequest.hasListener(on_request_event)) {
     console.log('ERROR: onBeforeRequest EventListener could not be added, because onBeforeRequest already has an EventListener.');
   } else {
     chrome.webRequest.onBeforeRequest.addListener(
-      onBeforeRequestEvent,
+      on_request_event,
       {urls: ['https://signin.aws.amazon.com/saml']},
       ['requestBody']
     );
   }
 }
 
-
-
 // Function to be called when this extension is de-actived
 // by unchecking the activation checkbox on the popup page
-function removeOnBeforeRequestEventListener() {
-  chrome.webRequest.onBeforeRequest.removeListener(onBeforeRequestEvent);
+function remove_request_listener() {
+  chrome.webRequest.onBeforeRequest.removeListener(on_request_event);
 }
-
-
 
 // Callback function for the webRequest OnBeforeRequest EventListener
 // This function runs on each request to https://signin.aws.amazon.com/saml
-function onBeforeRequestEvent(details) {
+function on_request_event(details) {
+  var saml = extract_saml(details.requestBody);
+
+  // Start out with a non-authenticated STS client
+  var sts_client = new AWS.STS();
+
+  // Assume role with SAML
+  assume_base_role(sts_client, saml.attribute, saml.assertion).then(function(base_profile) {
+
+    // Update STS client to use base credentials
+    sts_client = new AWS.STS({
+      accessKeyId: base_profile.credentials.AccessKeyId,
+      secretAccessKey: base_profile.credentials.SecretAccessKey,
+      sessionToken: base_profile.credentials.SessionToken
+    });
+
+    // Get credentials from all accounts
+    var promises = $.map(roles, function(role_arn, profile_name) {
+      return assume_additional_role(sts_client, role_arn, profile_name);
+    });
+
+    Promise.all(promises).then(function(profiles) {
+      profiles.unshift(base_profile);
+      download_file(profiles);
+    });
+  });
+}
+
+function extract_saml(request) {
   // Decode base64 SAML assertion in the request
-  var samlXmlDoc = '';
-  var formDataPayload = undefined;
-  if (details.requestBody.formData) {
-    samlXmlDoc = decodeURIComponent(unescape(window.atob(details.requestBody.formData.SAMLResponse[0])));
-  } else if (details.requestBody.raw) {
+  var saml_assertion;
+  var has_role_index;
+  var role_index;
+
+  if (request.formData) {
+    saml_assertion = request.formData.SAMLResponse[0];
+    has_role_index = 'roleIndex' in request.formData;
+    if (has_role_index) {
+      role_index = request.formData.roleIndex[0];
+    }
+  } else if (request.raw) {
     var combined = new ArrayBuffer(0);
-    details.requestBody.raw.forEach(function(element) {
+    request.raw.forEach(function(element) {
       var tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength);
       tmp.set( new Uint8Array(combined), 0 );
       tmp.set( new Uint8Array(element.bytes),combined.byteLength );
       combined = tmp.buffer;
     });
-    var combinedView = new DataView(combined);
+    var view = new DataView(combined);
     var decoder = new TextDecoder('utf-8');
-    formDataPayload = new URLSearchParams(decoder.decode(combinedView));
-    samlXmlDoc = decodeURIComponent(unescape(window.atob(formDataPayload.get('SAMLResponse'))));
+    var form_data = new URLSearchParams(decoder.decode(view));
+
+    saml_assertion = form_data.get('SAMLResponse');
+    role_index = form_data.get('roleIndex');
+    has_role_index = role_index != undefined;
   }
+
+  var saml_xml = decodeURIComponent(unescape(atob(saml_assertion)));
+
   // Convert XML String to DOM
   var parser = new DOMParser();
-  var domDoc = parser.parseFromString(samlXmlDoc, 'text/xml');
   // Get a list of claims (= AWS roles) from the SAML assertion
-  var roleDomNodes = domDoc.querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/Role"]')[0].childNodes;
-  // Parse the PrincipalArn and the RoleArn from the SAML Assertion.
-  var SAMLAssertion = undefined;
-  var hasRoleIndex = false;
-  var roleIndex = '';
-  if (details.requestBody.formData) {
-    SAMLAssertion = details.requestBody.formData.SAMLResponse[0];
-    hasRoleIndex = 'roleIndex' in details.requestBody.formData;
-    roleIndex = details.requestBody.formData.roleIndex[0];
-  } else if (formDataPayload) {
-    SAMLAssertion = formDataPayload.get('SAMLResponse');
-    roleIndex = formDataPayload.get('roleIndex');
-    hasRoleIndex = roleIndex != undefined;
-  }
+  var role_nodes = parser.parseFromString(saml_xml, 'text/xml')
+    .querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/Role"]')[0].childNodes;
+
   // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter to determine the role to assume
-  if (roleDomNodes.length > 1 && hasRoleIndex) {
-    for (var i = 0; i < roleDomNodes.length; i++) {
-      var nodeValue = roleDomNodes[i].innerHTML;
-      if (nodeValue.indexOf(roleIndex) > -1) {
+  var saml_attribute;
+  if (role_nodes.length > 1 && has_role_index) {
+    for (var i = 0; i < role_nodes.length; i++) {
+      var node_value = role_nodes[i].innerHTML;
+      if (node_value.indexOf(role_index) > -1) {
         // This DomNode holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
         // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-        extractPrincipalPlusRoleAndAssumeRole(nodeValue, SAMLAssertion);
+        saml_attribute = node_value;
       }
     }
   }
   // If there is just 1 role in the claim there will be no 'roleIndex' in the form data.
-  else if (roleDomNodes.length == 1) {
+  else if (role_nodes.length === 1) {
     // When there is just 1 role in the claim, use these details for the assumeRoleWithSAML API call
     // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-    extractPrincipalPlusRoleAndAssumeRole(roleDomNodes[0].innerHTML, SAMLAssertion);
+    saml_attribute = role_nodes[0].innerHTML;
   }
+
+  return {
+    assertion: saml_assertion,
+    attribute: saml_attribute
+  };
 }
 
-
-
-// Called from 'onBeforeRequestEvent' function.
+// Called from 'on_request_event' function.
 // Gets a Role Attribute from a SAMLAssertion as function argument. Gets the SAMLAssertion as a second argument.
 // This function extracts the RoleArn and PrincipalArn (SAML-provider)
 // from this argument and uses it to call the AWS STS assumeRoleWithSAML API.
-function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion) {
-  // Pattern for Role
-  var reRole = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
-  // Patern for Principal (SAML Provider)
-  var rePrincipal = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
+function assume_base_role(sts_client, saml_attribute, saml_assertion) {
   // Extraxt both regex patterns from SAMLAssertion attribute
-  var RoleArn = samlattribute.match(reRole)[0];
-  var PrincipalArn = samlattribute.match(rePrincipal)[0];
+  var role_arn = saml_attribute.match(/arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i)[0];
+  var principal_arn = saml_attribute.match(/arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i)[0];
 
-  // Set parameters needed for assumeRoleWithSAML method
-  var params = {
-    PrincipalArn: PrincipalArn,
-    RoleArn: RoleArn,
-    SAMLAssertion: SAMLAssertion,
-  };
-    // Call STS API from AWS
-  var sts = new AWS.STS();
-  sts.assumeRoleWithSAML(params, function(err, data) {
-    if (err) console.log(err, err.stack); // an error occurred
-    else {
-      // On succesful API response create file with the STS keys
-      var docContent = '[default] \n' +
-      'aws_access_key_id = ' + data.Credentials.AccessKeyId + ' \n' +
-      'aws_secret_access_key = ' + data.Credentials.SecretAccessKey + ' \n' +
-      'aws_session_token = ' + data.Credentials.SessionToken;
-
-      // If there are no Role ARNs configured in the options panel, continue to create credentials file
-      // Otherwise, extend docContent with a profile for each specified ARN in the options panel
-      if (Object.keys(RoleArns).length == 0) {
-        console.log('Output maken');
-        outputDocAsDownload(docContent);
+  return new Promise(function(resolve, reject) {
+    sts_client.assumeRoleWithSAML({
+      PrincipalArn: principal_arn,
+      RoleArn: role_arn,
+      SAMLAssertion: saml_assertion,
+    }, function(err, data) {
+      if (err) {
+        reject(err);
       } else {
-        var profileList = Object.keys(RoleArns);
-        console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[0]]);
-        assumeAdditionalRole(profileList, 0, data.Credentials.AccessKeyId, data.Credentials.SecretAccessKey, data.Credentials.SessionToken, docContent);
+        resolve({
+          name: 'default',
+          credentials: data.Credentials
+        });
       }
-    }
+    });
   });
 }
-
 
 // Will fetch additional STS keys for 1 role from the RoleArns dict
 // The assume-role API is called using the credentials (STS keys) fetched using the SAML claim. Basically the default profile.
-function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, SessionToken, docContent) {
-  // Set the fetched STS keys from the SAML reponse as credentials for doing the API call
-  var options = {'accessKeyId': AccessKeyId, 'secretAccessKey': SecretAccessKey, 'sessionToken': SessionToken};
-  var sts = new AWS.STS(options);
+function assume_additional_role(sts_client, role_arn, name) {
   // Set the parameters for the AssumeRole API call. Meaning: What role to assume
-  var params = {
-    RoleArn: RoleArns[profileList[index]],
-    RoleSessionName: profileList[index]
-  };
-    // Call the API
-  sts.assumeRole(params, function(err, data) {
-    if (err) console.log(err, err.stack); // an error occurred
-    else {
-      docContent += ' \n\n' +
-      '[' + profileList[index] + '] \n' +
-      'aws_access_key_id = ' + data.Credentials.AccessKeyId + ' \n' +
-      'aws_secret_access_key = ' + data.Credentials.SecretAccessKey + ' \n' +
-      'aws_session_token = ' + data.Credentials.SessionToken;
-    }
-    // If there are more profiles/roles in the RoleArns dict, do another call of assumeAdditionalRole to extend the docContent with another profile
-    // Otherwise, this is the last profile/role in the RoleArns dict. Proceed to creating the credentials file
-    if (index < profileList.length - 1) {
-      console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[index + 1]]);
-      assumeAdditionalRole(profileList, index + 1, AccessKeyId, SecretAccessKey, SessionToken, docContent);
-    } else {
-      outputDocAsDownload(docContent);
-    }
+  return new Promise(function(resolve, reject) {
+    sts_client.assumeRole({
+      RoleArn: role_arn,
+      RoleSessionName: name
+    }, function(err, data) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({
+          name: name,
+          credentials: data.Credentials
+        });
+      }
+    });
   });
 }
 
+function download_file(profiles) {
+  // Convert list of profiles to a credentials file
+  var content = $.map(profiles, function(profile) {
+    return '[' + profile.name + '] \n' +
+      'aws_access_key_id = ' + profile.credentials.AccessKeyId + ' \n' +
+      'aws_secret_access_key = ' + profile.credentials.SecretAccessKey + ' \n' +
+      'aws_session_token = ' + profile.credentials.SessionToken;
+  }).join('\n\n');
 
-
-// Called from either extractPrincipalPlusRoleAndAssumeRole (if RoleArns dict is empty)
-// Otherwise called from assumeAdditionalRole as soon as all roles from RoleArns have been assumed
-function outputDocAsDownload(docContent) {
-  var doc = URL.createObjectURL( new Blob([docContent], {type: 'application/octet-binary'}) );
+  var blob = new Blob([content], {type: 'application/octet-binary'});
+  var url = URL.createObjectURL(blob);
   // Triggers download of the generated file
-  chrome.downloads.download({ url: doc, filename: FileName, conflictAction: 'overwrite', saveAs: false });
+  chrome.downloads.download({ url: url, filename: filename, conflictAction: 'overwrite', saveAs: false });
 }
-
-
 
 // This Listener receives messages from options.js and popup.js
 // Received messages are meant to affect the background process.
-chrome.runtime.onMessage.addListener(
-  function(request, sender, sendResponse) {
-    // When the options are changed in the Options panel
-    // these items need to be reloaded in this background process.
-    if (request.action == 'reloadStorageItems') {
-      loadItemsFromStorage();
-      sendResponse({message: 'Storage items reloaded in background process.'});
-    }
-    // When the activation checkbox on the popup screen is checked/unchecked
-    // the webRequest event listener needs to be added or removed.
-    if (request.action == 'addWebRequestEventListener') {
-      addOnBeforeRequestEventListener();
-      sendResponse({message: 'webRequest EventListener added in background process.'});
-    }
-    if (request.action == 'removeWebRequestEventListener') {
-      removeOnBeforeRequestEventListener();
-      sendResponse({message: 'webRequest EventListener removed in background process.'});
-    }
-  });
+chrome.runtime.onMessage.addListener(function(request, sender, send_response) {
+  // When the options are changed in the Options panel
+  // these items need to be reloaded in this background process.
+  if (request.action === 'reloadStorageItems') {
+    load_items_from_storage();
+    send_response({message: 'Storage items reloaded in background process.'});
+  }
+  // When the activation checkbox on the popup screen is checked/unchecked
+  // the webRequest event listener needs to be added or removed.
+  if (request.action === 'addWebRequestEventListener') {
+    add_request_listener();
+    send_response({message: 'webRequest EventListener added in background process.'});
+  }
+  if (request.action === 'removeWebRequestEventListener') {
+    remove_request_listener();
+    send_response({message: 'webRequest EventListener removed in background process.'});
+  }
+});
 
-
-
-function loadItemsFromStorage() {
+function load_items_from_storage() {
   chrome.storage.sync.get({
     FileName: 'credentials',
     RoleArns: {}
   }, function(items) {
-    FileName = items.FileName;
-    RoleArns = items.RoleArns;
+    filename = items.FileName;
+    roles = items.RoleArns;
   });
 }

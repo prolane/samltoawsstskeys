@@ -12,7 +12,9 @@ function save_options() {
     var profile = $(this).find('[name=profile]').val();
     var arn = $(this).find('[name=arn]').val();
 
-    roles[profile] = arn;
+    if (profile && arn) {
+      roles[profile] = arn;
+    }
   });
 
   // Do the actual saving into Chrome storage
