@@ -1,42 +1,44 @@
 <!doctype html>
 <html>
   <head>
-	<script src="../lib/jquery-3.1.1.min.js"></script>
-	<link rel="stylesheet" type="text/css" href="options.css">
+    <link rel="stylesheet" type="text/css" href="options.css">
     <title>Options page for 'SAML to AWS STS Keys Converter'</title>
   </head>
   <body>
-	<div id="divTitle">
-		<div id="divIcon" class="inline-div"><img src="../icons/icon_128.png" alt="Icon" height="50" width="50"></div>
-		<div id="divHeader" class="inline-div"><h2>Options page for 'SAML to AWS STS Keys Converter'</h2></div>
-	</div>
-	<hr>
-	
-	<div id="divInfo">
-		<p>Developed by prolane.org (Gerard Laan)</p>
-		<p>For help, please see README at the <a href="https://github.com/prolane/samltoawsstskeys/blob/master/README.md" target="_blank">project page on Github.com</a></p>
-	</div>
-	
-	<div id="divSettings">
-		<div id="divFilename" class="setting-part">
-			<label>Filename for writing the fetched AWS STS keys. File will be written to Chrome's download directory. Example filename: credentials</label>
-			<br />
-			<input type="text" name="FileName" id="FileName" size="40">
-		</div>
-		
-		<div id="divRoles" class="setting-part">
-			<label>[OPTIONAL]</label><br>
-			<label>Specify a list of Role ARN's. For each role the plugin will call the assume-role API. The fetched AWS STS keys will be added to the output file as separate profiles.</label>
-			<div id="role_arns" class="inline-div">
-			</div>
-		</div>
-		
-		<div id="divSave">
-			<div id="status" class="inline-div"></div>
-			<button id="save">Save</button>
-		</div>
-	</div>
-	<script src="options.js"></script>
+    <div class="header">
+      <div class="inline-div"><img src="../icons/icon_128.png" alt="Icon" height="50" width="50"></div>
+      <div class="header-title inline-div"><h2>Options page for 'SAML to AWS STS Keys Converter'</h2></div>
+    </div>
+    <hr>
+
+    <div>
+      <p>Developed by prolane.org (Gerard Laan)</p>
+      <p>For help, please see README at the <a href="https://github.com/prolane/samltoawsstskeys/blob/master/README.md" target="_blank">project page on Github.com</a></p>
+    </div>
+
+    <div class="settings">
+      <div class="setting-part">
+        <label>Filename for writing the fetched AWS STS keys. File will be written to Chrome's download directory. Example filename: credentials</label>
+        <br>
+        <input type="text" id="filename" size="40">
+      </div>
+
+      <div class="setting-part">
+        <label>[OPTIONAL]</label><br>
+        <label>Specify a list of Role ARN's. For each role the plugin will call the assume-role API. The fetched AWS STS keys will be added to the output file as separate profiles.</label>
+        <div class="roles inline-div">
+          <table id="roles">
+          </table>
+        </div>
+      </div>
+
+      <div class="save">
+        <div id="status" class="status inline-div" style="display: none"></div>
+        <button id="save-button">Save</button>
+      </div>
+    </div>
+
+    <script src="../lib/jquery-3.1.1.min.js"></script>
+    <script src="options.js"></script>
   </body>
 </html>
-

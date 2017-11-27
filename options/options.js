@@ -1,36 +1,33 @@
 // Saves options to chrome.storage
 function save_options() {
   // Get the filename to be saved
-  var FileName = document.getElementById('FileName').value;
-  
+  var filename = $('#filename').val();
+
   // Get the Role_ARN's (Profile/ARNs pairs) entered by the user in the table
-  var RoleArns = {};
+  var roles = {};
+
   // Iterate over all added profiles in the list
-  $("input[id^='profile_']").each(function( index ) {  
-	  // Replace profile_<rowId> for arn_<rowId> to be able to get value of corresponding arn input field
-	  var input_id_arn = $(this).attr('id').replace("profile", "arn");
-	  // Create key-value pair to add to RoleArns dictionary.
-	  // Only add it to the dict if both profile and arn are not an empty string
-	  if ($(this).val() != '' && $('#' + input_id_arn).val() != '') {
-		  RoleArns[$(this).val()] = $('#' + input_id_arn).val();
-	  }
+  $('#roles').find('.role').each(function() {
+
+    var profile = $(this).find('[name=profile]').val();
+    var arn = $(this).find('[name=arn]').val();
+
+    if (profile && arn) {
+      roles[profile] = arn;
+    }
   });
-  
+
   // Do the actual saving into Chrome storage
   chrome.storage.sync.set({
-    FileName: FileName,
-	RoleArns: RoleArns
+    FileName: filename,
+    RoleArns: roles
   }, function() {
     // Show 'Options saved' message to let user know options were saved.
-    var status = document.getElementById('status');
-    status.textContent = 'Options saved.';
-    setTimeout(function() {
-      status.textContent = '';
-    }, 1500);
+    $('#status').text('Options saved.').show().delay(1500).fadeOut();
   });
 
   // Notify background process of changed storage items.
-  chrome.runtime.sendMessage({action: "reloadStorageItems"}, function(response) {
+  chrome.runtime.sendMessage({action: 'reloadStorageItems'}, function(response) {
     console.log(response.message);
   });
 }
@@ -38,67 +35,65 @@ function save_options() {
 // Restores state using the preferences stored in chrome.storage.
 function restore_options() {
   chrome.storage.sync.get({
-	// Default values
+    // Default values
     FileName: 'credentials',
-	RoleArns: {}
+    RoleArns: {}
   }, function(items) {
-	// Set filename
-    document.getElementById('FileName').value = items.FileName;
-	// Set the html for the Role ARN's Table
-	$("#role_arns").html('<table><tr id="tr_header"><th>Profile</th><th>ARN of the role</th><th></th><th></th></tr></table>');
-	// For each profile/ARN pair add table row (showing the profile-name and ARN)
-	for (var profile in items.RoleArns){
-		if (items.RoleArns.hasOwnProperty(profile)) {
-			addTableRow('#tr_header', profile, items.RoleArns[profile]);
-		}
-	}
-	// Add a blank table row if there are now current entries (So the user can easily add a new profile/ARN pair)
-	if (Object.keys(items.RoleArns).length == 0) {
-		addTableRow('#role_arns table tr:last', null, null);
-	}
+
+    // Set filename
+    $('#filename').val(items.FileName);
+
+    // Create table header
+    var tr = $('<tr>')
+      .append($('<th>').text('Profile'))
+      .append($('<th>').text('ARN of the role'))
+      .append($('<th>')) // Delete button
+      .append($('<th>')); // Add button
+
+    $('#roles').append(tr);
+
+    // Add a table row for each profile/ARN pair
+    $.each(items.RoleArns, function(profile, arn) {
+      add_table_row(profile, arn);
+    });
+
+    // Add a blank table row to easily add a new profile
+    add_table_row(null, null);
   });
 }
 
-// Add a blank table row for the user to add a new profile/ARN pair
-function addTableRow(previousRowJquerySelector, profile, arn) {
-	// Generate random identifier for the to be added row
-	var newRowId = randomId();
-	$(previousRowJquerySelector).after(getTableRowHtml(newRowId, profile, arn));
-	// Add eventHandlers for the newly added buttons
-	$('#btn_add_' + newRowId).on("click", function() {
-		addTableRow('#tr_' + newRowId, null, null);
-	});
-	$('#btn_del_' + newRowId).on("click", function() {
-		delTableRow('#tr_' + newRowId);
-	});
+// Generate HTML for a table row of the roles table
+function add_table_row(profile, arn) {
+  // Create input fields for profile name and arn
+  profile = $('<input>').attr('name', 'profile').attr('size', 18).val(profile);
+  arn = $('<input>').attr('name', 'arn').attr('size', 55).val(arn);
+
+  // Create add/delete buttons
+  var del = $('<button>').text('DEL');
+  var add = $('<button>').text('ADD');
+
+  // Construct table row
+  var tr = $('<tr>').addClass('role')
+    .append($('<td>').append(profile))
+    .append($('<td>').append(arn))
+    .append($('<td>').append(del))
+    .append($('<td>').append(add));
+
+  // Add eventHandlers for the newly added buttons
+  del.on('click', function() {
+    tr.remove();
+  });
+  add.on('click', function() {
+    add_table_row(null, null);
+  });
+
+  $('#roles').append(tr);
 }
 
-// Remove table row
-function delTableRow(tableRowJquerySelector) {
-	// Remove table row from the DOM including bound events
-	$(tableRowJquerySelector).remove();
-}
+$(function(){
+  restore_options();
 
-// Generate HTML for a table row of the role_arns table
-function getTableRowHtml(tableRowId, profile, arn) {
-	var profileValue = '';
-	var arnValue = '';
-	// If profile and arn are not NULL, generate HTML value attribute
-	if (profile) {profileValue = 'value="' + profile + '"'};
-	if (arn) {arnValue = 'value="' + arn + '"'};
-	// Generate HTML for the row
-	var html =	'<tr id="tr_' + tableRowId + '">\
-				<th><input type="text" id="profile_' + tableRowId + '" size="18" ' + profileValue + '></th> \
-				<th><input type="text" id="arn_' + tableRowId + '" size="55" ' + arnValue + '></th> \
-				<th><button id="btn_del_' + tableRowId + '">DEL</button></th> \
-				<th><button id="btn_add_' + tableRowId + '">ADD</button></th> \
-				</tr>';
-	return html;
-}
-
-function randomId() {
-	return Math.random().toString(36).substr(2, 8);
-}
-
-document.addEventListener('DOMContentLoaded', restore_options);
-document.getElementById('save').addEventListener('click', save_options);
+  $('#save-button').click(function(){
+    save_options();
+  });
+});
