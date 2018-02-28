@@ -7,7 +7,8 @@ The Chrome Extension can be downloaded here:
 # Table of Contents
 * [Why this Chrome Extension?](#why)
 * [Getting Started](#gettingstarted)
-* [Create a symlink to your .aws directory (for Windows users)](#symlink)
+* [Create a link to your .aws/credentials file (for Windows users)](#winlink)
+* [Create a link to your .aws credentials file (for Mac users)](#maclink)
 * [Frequently Asked Question](#faq)
 
 ## <a name="why"></a>Why this Chrome Extension?
@@ -18,12 +19,22 @@ You run into trouble as soon as you would like to execute some fancy scripts fro
 The Security Token Service (STS) from AWS provides an API action assumeRoleWithSAML. Using the SAML Assertion given by your IDP the Chrome Extension will call this API action to fetch temporary credentials. (AccessKeyId, SecretAccessKey and SessionToken). This way there is no need to create some sort of anonymous user in AWS IAM used for executing scripts. This would be a real security nightmare, since it won't be possible to audit who did what. This Chrome Extension however will make it super easy for you to just use your corporate identity for executing scripts calling AWS API's.
 
 ## <a name="gettingstarted"></a>Getting Started
-TODO
+1. Install Plugin
+1. Populate with Roles from your sub-accounts
+1. Setup a link to your directory see [here](#winlink) or [here](#maclink)
+1. Test connectivity using the aws cli ```aws s3 ls --profile <stsiamalias> ```
 
-## <a name="symlink"></a>Create a symlink to your .aws directory (for Windows users)
-TODO
+## Create a link to your .aws/credentials directory
+### <a name="winlink"></a>Windows
+del %UserProfile%\.aws\credentials
+mklink %UserProfile%\.aws\credentials %UserProfile%\Downloads\credentials
+
+### <a name="maclink"></a>Mac OSX
+rm ~/.aws/credentials
+ln -s ~/Downloads/credentials ~/.aws/credentials
 
 ## <a name="faq"></a>FAQ: Frequently Asked Question
 1. Why can I not save file somewhere else?
-TODO
-2. How long are the credentials valid?
+TA quicker way to get the full latest list is to open Chrome > Console and hit document.extraRoles.   Their full list can be easily downloaded for you to use within your own STS plugin. ODO
+1. How long are the credentials valid?
+AWS only allow the STS temporary credentials for up to 2 hours.  
