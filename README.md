@@ -22,7 +22,7 @@ The Security Token Service (STS) from AWS provides an API action assumeRoleWithS
 1. Install Plugin
 1. Populate with Roles from your sub-accounts
 1. Setup a link to your directory see [here](#winlink) or [here](#maclink)
-1. Test connectivity using the aws cli ```aws s3 ls --profile <stsiamalias>```
+1. Test connectivity using the aws cli ```aws s3 ls --profile <stsiamalias> ```
 
 ## Create a link to your .aws/credentials directory
 ### <a name="winlink"></a>Windows
