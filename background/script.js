@@ -125,6 +125,7 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion) {
     
 	// Set parameters needed for assumeRoleWithSAML method
 	var params = {
+		DurationSeconds: 43200,
 		PrincipalArn: PrincipalArn,
 		RoleArn: RoleArn,
 		SAMLAssertion: SAMLAssertion,
@@ -163,6 +164,7 @@ function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, 
 	var sts = new AWS.STS(options);
 	// Set the parameters for the AssumeRole API call. Meaning: What role to assume
 	var params = {
+		DurationSeconds: 43200,
 		RoleArn: RoleArns[profileList[index]],
 		RoleSessionName: profileList[index]
 	};
