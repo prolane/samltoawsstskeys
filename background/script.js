@@ -153,7 +153,7 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
 			// If there are no Role ARNs configured in the options panel, continue to create credentials file
 			// Otherwise, extend docContent with a profile for each specified ARN in the options panel
 			if (Object.keys(RoleArns).length == 0) {
-				console.log('Output maken');
+				console.log('Generate AWS tokens file.');
 				outputDocAsDownload(docContent);
 			} else {
 				var profileList = Object.keys(RoleArns);
