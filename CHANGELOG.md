@@ -1,5 +1,8 @@
 # Changelog
 
+## 2018-may-12 (v2.2)
+* Now supports the SessionDuration SAML attribute which can be set by your IDP administrator. This can keep your credentials valid longer than the default 1 hour. Thanks to [Jeroen](https://github.com/ashemedai) for his contribution!
+
 ## 2017-nov-01 (v2.1)
 * Bug fix: Chrome 62 broke the extension. Special thanks for [Brice](https://github.com/bdruth) for contributing. Thanks to [Gijs](https://gitlab.com/gbvanrenswoude) for helping out with testing.
 
