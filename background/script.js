@@ -1,5 +1,6 @@
 // Global variables
 var FileName = 'credentials';
+var ApplySessionDuration = true;
 var RoleArns = {};
 
 // When this background process starts, load variables from chrome storage 
@@ -91,11 +92,12 @@ function onBeforeRequestEvent(details) {
     hasRoleIndex = roleIndex != undefined;
   }
 
-  if (SessionDuration !== undefined) {
+  // Only set the SessionDuration if it was supplied by the SAML provider and 
+  // when the user has configured to use this feature.
+  if (SessionDuration !== undefined && ApplySessionDuration) {
     SessionDuration = Number(SessionDuration.firstElementChild.textContent)
   } else {
-    // Amazon default
-    SessionDuration = 3600;
+    SessionDuration = null;
   }
 
    // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter to determine the role to assume
@@ -136,9 +138,12 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
 	var params = {
 		PrincipalArn: PrincipalArn,
 		RoleArn: RoleArn,
-		SAMLAssertion: SAMLAssertion,
-		DurationSeconds: SessionDuration,
+		SAMLAssertion: SAMLAssertion
 	};
+  if (SessionDuration !== null) {
+    params['DurationSeconds'] = SessionDuration;
+  }
+
 	// Call STS API from AWS
 	var sts = new AWS.STS();
 	sts.assumeRoleWithSAML(params, function(err, data) {
@@ -174,9 +179,11 @@ function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, 
 	// Set the parameters for the AssumeRole API call. Meaning: What role to assume
 	var params = {
 		RoleArn: RoleArns[profileList[index]],
-		RoleSessionName: profileList[index],
-		DurationSeconds: SessionDuration,
+		RoleSessionName: profileList[index]
 	};
+  if (SessionDuration !== null) {
+    params['DurationSeconds'] = SessionDuration;
+  }
 	// Call the API
 	sts.assumeRole(params, function(err, data) {
 		if (err) console.log(err, err.stack); // an error occurred
@@ -237,9 +244,15 @@ chrome.runtime.onMessage.addListener(
 function loadItemsFromStorage() {
   chrome.storage.sync.get({
     FileName: 'credentials',
-	RoleArns: {}
+    ApplySessionDuration: 'yes',
+    RoleArns: {}
   }, function(items) {
     FileName = items.FileName;
-	RoleArns = items.RoleArns;
+    if (items.ApplySessionDuration == "no") {
+      ApplySessionDuration = false;
+    } else {
+      ApplySessionDuration = true;
+    }
+    RoleArns = items.RoleArns;
   });
 }

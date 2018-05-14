@@ -1,5 +1,8 @@
 # Changelog
 
+## 2018-may-14 (v2.3)
+* Release 2.2 revealed many users have their SAML provider requesting a SessionDuration which is higher than the maximum session duration configured at the IAM Role. Release 2.3 now supports manually enabling or disabling this SessionDuration feature. The feature is enabled by default, but can be disabled in the options.
+
 ## 2018-may-12 (v2.2)
 * Now supports the SessionDuration SAML attribute which can be set by your IDP administrator. This can keep your credentials valid longer than the default 1 hour. Thanks to [Jeroen](https://github.com/ashemedai) for his contribution!
 

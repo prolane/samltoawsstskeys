@@ -3,6 +3,9 @@ function save_options() {
   // Get the filename to be saved
   var FileName = document.getElementById('FileName').value;
   
+  // Does SessionDuration needs to be applied?
+  var ApplySessionDuration = $("#SessionDuration option:selected").val();
+
   // Get the Role_ARN's (Profile/ARNs pairs) entered by the user in the table
   var RoleArns = {};
   // Iterate over all added profiles in the list
@@ -19,6 +22,7 @@ function save_options() {
   // Do the actual saving into Chrome storage
   chrome.storage.sync.set({
     FileName: FileName,
+    ApplySessionDuration: ApplySessionDuration,
 	RoleArns: RoleArns
   }, function() {
     // Show 'Options saved' message to let user know options were saved.
@@ -40,10 +44,13 @@ function restore_options() {
   chrome.storage.sync.get({
 	// Default values
     FileName: 'credentials',
+    ApplySessionDuration: 'yes',
 	RoleArns: {}
   }, function(items) {
 	// Set filename
     document.getElementById('FileName').value = items.FileName;
+    // Set ApplySessionDuration
+    $("#SessionDuration").val(items.ApplySessionDuration);
 	// Set the html for the Role ARN's Table
 	$("#role_arns").html('<table><tr id="tr_header"><th>Profile</th><th>ARN of the role</th><th></th><th></th></tr></table>');
 	// For each profile/ARN pair add table row (showing the profile-name and ARN)
