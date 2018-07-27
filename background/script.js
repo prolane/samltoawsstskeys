@@ -57,6 +57,11 @@ function on_request_event(details) {
   // Assume role with SAML
   assume_base_role(sts_client, saml.attribute, saml.assertion).then(function(base_profile) {
 
+    if (base_profile.credentials === null) {
+      console.log('ERROR: unable to assume role from SAML')
+      return
+    }
+
     // Update STS client to use base credentials
     sts_client = new AWS.STS({
       accessKeyId: base_profile.credentials.AccessKeyId,
@@ -154,7 +159,10 @@ function assume_base_role(sts_client, saml_attribute, saml_assertion) {
       SAMLAssertion: saml_assertion,
     }, function(err, data) {
       if (err) {
-        reject(err);
+        resolve({
+          name: name,
+          credentials: null
+        });
       } else {
         resolve({
           name: 'default',
@@ -172,10 +180,13 @@ function assume_additional_role(sts_client, role_arn, name) {
   return new Promise(function(resolve, reject) {
     sts_client.assumeRole({
       RoleArn: role_arn,
-      RoleSessionName: name
+      RoleSessionName: 'samltoawsstskeys-' + name
     }, function(err, data) {
       if (err) {
-        reject(err);
+        resolve({
+          name: name,
+          credentials: null
+        });
       } else {
         resolve({
           name: name,
@@ -189,6 +200,9 @@ function assume_additional_role(sts_client, role_arn, name) {
 function download_file(profiles) {
   // Convert list of profiles to a credentials file
   var content = $.map(profiles, function(profile) {
+    if (profile.credentials === null) {
+      return '# Invalid credentials for ' + profile.name;
+    }
     return '[' + profile.name + '] \n' +
       'aws_access_key_id = ' + profile.credentials.AccessKeyId + ' \n' +
       'aws_secret_access_key = ' + profile.credentials.SecretAccessKey + ' \n' +
