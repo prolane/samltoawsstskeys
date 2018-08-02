@@ -81,11 +81,13 @@ function onBeforeRequestEvent(details) {
   var SAMLAssertion = undefined;
   var SessionDuration = domDoc.querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/SessionDuration"]')[0]
   var hasRoleIndex = false;
-  var roleIndex = "";
+  var roleIndex = undefined;
   if (details.requestBody.formData) {
     SAMLAssertion = details.requestBody.formData.SAMLResponse[0];
-    hasRoleIndex = "roleIndex" in details.requestBody.formData;
-    roleIndex = details.requestBody.formData.roleIndex[0];
+    if ("roleIndex" in details.requestBody.formData) {
+      hasRoleIndex = true;
+      roleIndex = details.requestBody.formData.roleIndex[0];
+    }
   } else if (formDataPayload) {
     SAMLAssertion = formDataPayload.get('SAMLResponse');
     roleIndex = formDataPayload.get('roleIndex');
