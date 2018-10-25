@@ -1,6 +1,5 @@
 // Global variables
-var filename = 'credentials';
-var roles = {};
+var filename, duration, roles;
 
 // When this background process starts, load variables from chrome storage
 // from saved Extension Options
@@ -157,6 +156,7 @@ function assume_base_role(sts_client, saml_attribute, saml_assertion) {
       PrincipalArn: principal_arn,
       RoleArn: role_arn,
       SAMLAssertion: saml_assertion,
+      DurationSeconds: duration
     }, function(err, data) {
       if (err) {
         resolve({
@@ -180,7 +180,8 @@ function assume_additional_role(sts_client, role_arn, name) {
   return new Promise(function(resolve, reject) {
     sts_client.assumeRole({
       RoleArn: role_arn,
-      RoleSessionName: 'samltoawsstskeys-' + name
+      RoleSessionName: 'samltoawsstskeys-' + name,
+      DurationSeconds: duration
     }, function(err, data) {
       if (err) {
         resolve({
@@ -239,9 +240,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, send_response) {
 function load_items_from_storage() {
   chrome.storage.sync.get({
     FileName: 'credentials',
+    SessionDuration: 3600,
     RoleArns: {}
   }, function(items) {
     filename = items.FileName;
+    duration = items.SessionDuration;
     roles = items.RoleArns;
   });
 }

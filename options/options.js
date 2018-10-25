@@ -3,6 +3,8 @@ function save_options() {
   // Get the filename to be saved
   var filename = $('#filename').val();
 
+  var duration = $('#duration').val();
+
   // Get the Role_ARN's (Profile/ARNs pairs) entered by the user in the table
   var roles = {};
 
@@ -20,6 +22,7 @@ function save_options() {
   // Do the actual saving into Chrome storage
   chrome.storage.sync.set({
     FileName: filename,
+    SessionDuration: duration,
     RoleArns: roles
   }, function() {
     // Show 'Options saved' message to let user know options were saved.
@@ -37,11 +40,15 @@ function restore_options() {
   chrome.storage.sync.get({
     // Default values
     FileName: 'credentials',
+    SessionDuration: 3600,
     RoleArns: {}
   }, function(items) {
 
     // Set filename
     $('#filename').val(items.FileName);
+
+    // Set session duration
+    $('#duration').val(items.SessionDuration);
 
     // Create table header
     var tr = $('<tr>')

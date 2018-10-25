@@ -24,6 +24,18 @@
       </div>
 
       <div class="setting-part">
+        <label>Session duration. Note that if you specify a longer duration than allowed for a role, your request will fail.</label>
+        <br>
+        <select id="duration">
+          <option value="3600">1 hour</option>
+          <option value="7200">2 hours</option>
+          <option value="14400">4 hours</option>
+          <option value="28800">8 hours</option>
+          <option value="43200">12 hours</option>
+        </select>
+      </div>
+
+      <div class="setting-part">
         <label>[OPTIONAL]</label><br>
         <label>Specify a list of Role ARN's. For each role the plugin will call the assume-role API. The fetched AWS STS keys will be added to the output file as separate profiles.</label>
         <div class="roles inline-div">
