@@ -2,6 +2,7 @@
 var FileName = 'credentials';
 var ApplySessionDuration = true;
 var RoleArns = {};
+var LF = '\n';
 
 // When this background process starts, load variables from chrome storage 
 // from saved Extension Options
@@ -102,6 +103,11 @@ function onBeforeRequestEvent(details) {
     SessionDuration = null;
   }
 
+  // Change newline sequence when client is on Windows
+  if (navigator.userAgent.contains('Windows')) {
+    LF = '\r\n'
+  }
+
    // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter to determine the role to assume
   if (roleDomNodes.length > 1 && hasRoleIndex) {
     for (i = 0; i < roleDomNodes.length; i++) { 
@@ -152,9 +158,9 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
 		if (err) console.log(err, err.stack); // an error occurred
 		else {
 			// On succesful API response create file with the STS keys
-			var docContent = "[default] \n" +
-			"aws_access_key_id = " + data.Credentials.AccessKeyId + " \n" +
-			"aws_secret_access_key = " + data.Credentials.SecretAccessKey + " \n" +
+			var docContent = "[default]" + LF +
+			"aws_access_key_id = " + data.Credentials.AccessKeyId + LF +
+			"aws_secret_access_key = " + data.Credentials.SecretAccessKey + LF +
 			"aws_session_token = " + data.Credentials.SessionToken;
 
 			// If there are no Role ARNs configured in the options panel, continue to create credentials file
@@ -190,10 +196,10 @@ function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, 
 	sts.assumeRole(params, function(err, data) {
 		if (err) console.log(err, err.stack); // an error occurred
 		else {
-			docContent += " \n\n" +
-			"[" + profileList[index] + "] \n" +
-			"aws_access_key_id = " + data.Credentials.AccessKeyId + " \n" +
-			"aws_secret_access_key = " + data.Credentials.SecretAccessKey + " \n" +
+			docContent += LF + LF +
+			"[" + profileList[index] + "]" + LF +
+			"aws_access_key_id = " + data.Credentials.AccessKeyId + LF +
+			"aws_secret_access_key = " + data.Credentials.SecretAccessKey + LF +
 			"aws_session_token = " + data.Credentials.SessionToken;
 		}
 		// If there are more profiles/roles in the RoleArns dict, do another call of assumeAdditionalRole to extend the docContent with another profile
