@@ -20,6 +20,14 @@
 	<hr>
 	
 	<div id="divChangelog">
+		<h3>2018-nov-15<br>v2.5</h3>
+		<ul>
+			<li>Implements CRLF as newlines in the credentials file when the client is on Windows. Fixes <a href="https://github.com/prolane/samltoawsstskeys/issues/21" target="_blank">#21</a></li>
+			<li>Removes unnecessary spaces prior the newlines in credentials file. Fixes <a href="https://github.com/prolane/samltoawsstskeys/issues/14" target="_blank">#14</a></li>
+		</ul>
+		<br />
+		<br />
+
 		<h3>2018-aug-2<br>v2.4</h3>
 		<ul>
 			<li>Bug fix for users with one IAM role in the SAML claim. Bug was introduced with release 2.1, but according to user reports only results in an error starting with Chrome release 68.</li>
