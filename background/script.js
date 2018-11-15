@@ -104,7 +104,7 @@ function onBeforeRequestEvent(details) {
   }
 
   // Change newline sequence when client is on Windows
-  if (navigator.userAgent.contains('Windows')) {
+  if (navigator.userAgent.indexOf('Windows')  !== -1) {
     LF = '\r\n'
   }
 
