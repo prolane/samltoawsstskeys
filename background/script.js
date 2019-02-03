@@ -218,7 +218,9 @@ function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, 
 // Called from either extractPrincipalPlusRoleAndAssumeRole (if RoleArns dict is empty)
 // Otherwise called from assumeAdditionalRole as soon as all roles from RoleArns have been assumed 
 function outputDocAsDownload(docContent) {
-	var doc = URL.createObjectURL( new Blob([docContent], {type: 'application/octet-binary'}) );
+  console.log('INFO: Now going to download doc...');
+  console.log(docContent)
+  var doc = URL.createObjectURL( new Blob([docContent], {type: 'application/octet-binary'}) );
 	// Triggers download of the generated file
 	chrome.downloads.download({ url: doc, filename: FileName, conflictAction: 'overwrite', saveAs: false });
 }
