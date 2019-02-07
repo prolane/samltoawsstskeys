@@ -1,5 +1,8 @@
 # Changelog
 
+## 2019-feb-7 (v2.6)
+* Adds the option to enable debug logs
+
 ## 2018-nov-15 (v2.5)
 * Implements CRLF as newlines in the credentials file when the client is on Windows. Fixes [#21](https://github.com/prolane/samltoawsstskeys/issues/21)
 * Removes unnecessary spaces prior the newlines in credentials file. Fixes [#14](https://github.com/prolane/samltoawsstskeys/issues/14)
