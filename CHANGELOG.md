@@ -1,5 +1,8 @@
 # Changelog
 
+## 2019-feb-8 (v2.7)
+* Changed permissions. The extension will now ask access to any requested URL. This is needed because of changed policy in Chrome 72 for the chrome.webRequest API. Read [here](https://github.com/prolane/samltoawsstskeys/issues/28#issuecomment-461938267) for the rationale behind it. Fixes [#28](https://github.com/prolane/samltoawsstskeys/issues/28).
+
 ## 2019-feb-7 (v2.6)
 * Adds the option to enable debug logs
 

@@ -20,13 +20,20 @@
 	<hr>
 	
 	<div id="divChangelog">
+		<h3>2019-feb-8<br>v2.7</h3>
+		<ul>
+			<li>Changed permissions. The extension will now ask access to any requested URL. This is needed because of changed policy in Chrome 72 for the chrome.webRequest API. Read <a href="https://github.com/prolane/samltoawsstskeys/issues/28#issuecomment-461938267" target="_blank">here</a> for the rationale behind it. Fixes <a href="https://github.com/prolane/samltoawsstskeys/issues/28" target="_blank">#28</a>.</li>
+		</ul>
+		<br />
+		<br />
+
 		<h3>2019-feb-7<br>v2.6</h3>
 		<ul>
 			<li>Adds the option to enable debug logs</li>
 		</ul>
 		<br />
 		<br />
-		
+
 		<h3>2018-nov-15<br>v2.5</h3>
 		<ul>
 			<li>Implements CRLF as newlines in the credentials file when the client is on Windows. Fixes <a href="https://github.com/prolane/samltoawsstskeys/issues/21" target="_blank">#21</a></li>
