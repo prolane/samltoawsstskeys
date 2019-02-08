@@ -19,7 +19,7 @@
   "options_page": "options/options.html",
   "permissions": [
     "webRequest",
-    "https://signin.aws.amazon.com/saml",
+    "<all_urls>",
     "storage",
     "downloads",
     "tabs"
