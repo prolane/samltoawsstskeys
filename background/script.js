@@ -185,12 +185,15 @@ async function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertio
 			"aws_secret_access_key = " + data.Credentials.SecretAccessKey + LF +
 			"aws_session_token = " + data.Credentials.SessionToken;
 
-      docContent += await assumeAdditionalSamlRoles(
-                                                     sts,
-                                                     SAMLAssertion,
-                                                     {},
-                                                     RoleArn,
-                                                   );
+      if (AssumeAllRoles) {
+        docContent += await assumeAdditionalSamlRoles(
+                                                       sts,
+                                                       SAMLAssertion,
+                                                       {},
+                                                       RoleArn,
+                                                     );
+      }
+
       if (DebugLogs) {
         console.log('DEBUG: Successfully assumed default profile');
         console.log('docContent:');
