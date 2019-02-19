@@ -6,8 +6,12 @@ var DebugLogs = false;
 var RoleArns = {};
 var LF = '\n';
 
+var config = {
+               AccountAliases : [],
+             }
 
-// When this background process starts, load variables from chrome storage 
+
+// When this background process starts, load variables from chrome storage
 // from saved Extension Options
 loadItemsFromStorage();
 // Additionaly on start of the background process it is checked if this extension can be activated
@@ -189,7 +193,7 @@ async function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertio
         docContent += await assumeAdditionalSamlRoles(
                                                        sts,
                                                        SAMLAssertion,
-                                                       {},
+                                                       config,
                                                        RoleArn,
                                                      );
       }
@@ -249,10 +253,10 @@ async function buildDocument(doc, credBlock) {
 async function substituteAccountAlias(credBlock, config) {
   if (config.AccountAliases) {
     return config.AccountAliases
-      .reduce((acc, alias) => {
-        const re = new RegExp('\\[' + alias.AccountNumber + '-(.*)\\]');
-        return acc.replace(re, '[' + alias.Alias + '-$1]');
-      }, (await credBlock));
+           .reduce((acc, alias) => {
+             const re = new RegExp('\\[' + alias.AccountNumber + '-(.*)\\]');
+             return acc.replace(re, '[' + alias.Alias + '-$1]');
+           }, (await credBlock));
   }
 
   return credBlock;
@@ -368,6 +372,7 @@ function loadItemsFromStorage() {
     FileName: 'credentials',
     ApplySessionDuration: 'yes',
     AssumeAllRoles: 'yes',
+    AccountAliases: [],
     DebugLogs: 'no',
     RoleArns: {}
   }, function(items) {
@@ -384,6 +389,7 @@ function loadItemsFromStorage() {
       DebugLogs = true;
     }
     RoleArns = items.RoleArns;
+    config.AccountAliases = items.AccountAliases;
   });
 
   console.debug(
@@ -392,5 +398,6 @@ function loadItemsFromStorage() {
                + '  ApplySessionDuration: ' + ApplySessionDuration     + '\n'
                + '  AssumeAllRoles:       ' + AssumeAllRoles           + '\n'
                + '  RoleArns:             ' + JSON.stringify(RoleArns) + '\n'
+               + '  AccountAliases:       ' + JSON.stringify(config.AccountAliases) + '\n'
                );
 }
