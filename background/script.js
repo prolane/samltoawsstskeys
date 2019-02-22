@@ -70,10 +70,10 @@ function onBeforeRequestEvent(details) {
     samlXmlDoc = decodeURIComponent(unescape(window.atob(details.requestBody.formData.SAMLResponse[0])));
   } else if (details.requestBody.raw) {
     var combined = new ArrayBuffer(0);
-    details.requestBody.raw.forEach(function(element) { 
+    details.requestBody.raw.forEach(function(element) {
       var tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength); 
-      tmp.set( new Uint8Array(combined), 0 ); 
-      tmp.set( new Uint8Array(element.bytes),combined.byteLength ); 
+      tmp.set( new Uint8Array(combined), 0 );
+      tmp.set( new Uint8Array(element.bytes),combined.byteLength );
       combined = tmp.buffer;
     });
     var combinedView = new DataView(combined);
@@ -109,7 +109,7 @@ function onBeforeRequestEvent(details) {
     hasRoleIndex = roleIndex != undefined;
   }
 
-  // Only set the SessionDuration if it was supplied by the SAML provider and 
+  // Only set the SessionDuration if it was supplied by the SAML provider and
   // when the user has configured to use this feature.
   if (SessionDuration !== undefined && ApplySessionDuration) {
     SessionDuration = Number(SessionDuration.firstElementChild.textContent)
@@ -131,7 +131,7 @@ function onBeforeRequestEvent(details) {
   
    // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter to determine the role to assume
   if (roleDomNodes.length > 1 && hasRoleIndex) {
-    for (i = 0; i < roleDomNodes.length; i++) { 
+    for (i = 0; i < roleDomNodes.length; i++) {
       var nodeValue = roleDomNodes[i].innerHTML;
       if (nodeValue.indexOf(roleIndex) > -1) {
         // This DomNode holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
@@ -215,7 +215,7 @@ async function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertio
 				console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[0]]);
 				assumeAdditionalRole(profileList, 0, data.Credentials.AccessKeyId, data.Credentials.SecretAccessKey, data.Credentials.SessionToken, docContent, SessionDuration);
 			}
-		}        
+		}
 	});
 }
 
