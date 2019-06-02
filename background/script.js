@@ -1,9 +1,11 @@
 // Global variables
 var FileName = 'credentials';
 var ApplySessionDuration = true;
+let AssumeAllRoles = true;
 var DebugLogs = false;
 var RoleArns = {};
 var LF = '\n';
+
 
 // When this background process starts, load variables from chrome storage 
 // from saved Extension Options
@@ -148,7 +150,7 @@ function onBeforeRequestEvent(details) {
 // Gets a Role Attribute from a SAMLAssertion as function argument. Gets the SAMLAssertion as a second argument.
 // This function extracts the RoleArn and PrincipalArn (SAML-provider)
 // from this argument and uses it to call the AWS STS assumeRoleWithSAML API.
-function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, SessionDuration) {
+async function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, SessionDuration) {
 	// Pattern for Role
 	var reRole = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
 	// Patern for Principal (SAML Provider)
@@ -174,7 +176,7 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
 
 	// Call STS API from AWS
 	var sts = new AWS.STS();
-	sts.assumeRoleWithSAML(params, function(err, data) {
+	sts.assumeRoleWithSAML(params, async function(err, data) {
 		if (err) console.log(err, err.stack); // an error occurred
 		else {
 			// On succesful API response create file with the STS keys
@@ -183,6 +185,12 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
 			"aws_secret_access_key = " + data.Credentials.SecretAccessKey + LF +
 			"aws_session_token = " + data.Credentials.SessionToken;
 
+      docContent += await assumeAdditionalSamlRoles(
+                                                     sts,
+                                                     SAMLAssertion,
+                                                     {},
+                                                     RoleArn,
+                                                   );
       if (DebugLogs) {
         console.log('DEBUG: Successfully assumed default profile');
         console.log('docContent:');
@@ -202,6 +210,61 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
 			}
 		}        
 	});
+}
+
+
+async function assumeAdditionalSamlRoles(
+                                          sts,
+                                          samlResponse,
+                                          config,
+                                          defaultRole,
+                                        ) {
+  const roleAttributeName  = 'https://aws.amazon.com/SAML/Attributes/Role';
+
+  return new LibSaml(samlResponse)
+             .getAttribute(roleAttributeName)
+             .filter(x => !x.match(defaultRole))
+             .map(role => LibSTS.assumeRole(
+                                             config,
+                                             console,
+                                             sts,
+                                             role,
+                                             samlResponse
+                                           ))
+             .filter(x => x != null) // filter roles which could not be assumed.
+             .map(identity => createCredentialBlock(identity))
+             .map(credBlock => substituteAccountAlias(credBlock, config))
+             .reduce((doc, credBlock) => buildDocument(doc, credBlock), '')
+}
+
+
+async function buildDocument(doc, credBlock) {
+  return (await doc).concat((LF + LF), await credBlock);
+}
+
+
+async function substituteAccountAlias(credBlock, config) {
+  if (config.AccountAliases) {
+    return config.AccountAliases
+      .reduce((acc, alias) => {
+        const re = new RegExp('\\[' + alias.AccountNumber + '-(.*)\\]');
+        return acc.replace(re, '[' + alias.Alias + '-$1]');
+      }, (await credBlock));
+  }
+
+  return credBlock;
+}
+
+
+async function createCredentialBlock(identity) {
+  const { accountNumber, roleName, credentials } = await identity;
+
+  return (
+             '[' + accountNumber + '-' + roleName + ']' + LF
+           + 'aws_access_key_id = ' + credentials.AccessKeyId + LF
+           + 'aws_secret_access_key = ' + credentials.SecretAccessKey + LF
+           + 'aws_session_token = ' + credentials.SessionToken + LF
+         );
 }
 
 
@@ -301,6 +364,7 @@ function loadItemsFromStorage() {
   chrome.storage.sync.get({
     FileName: 'credentials',
     ApplySessionDuration: 'yes',
+    AssumeAllRoles: 'yes',
     DebugLogs: 'no',
     RoleArns: {}
   }, function(items) {
@@ -310,6 +374,7 @@ function loadItemsFromStorage() {
     } else {
       ApplySessionDuration = true;
     }
+    AssumeAllRoles = items.AssumeAllRoles === 'yes';
     if (items.DebugLogs == "no") {
       DebugLogs = false;
     } else {
@@ -317,4 +382,12 @@ function loadItemsFromStorage() {
     }
     RoleArns = items.RoleArns;
   });
+
+  console.debug(
+                 'Items loaded from storage:\n'
+               + '  FileName:             ' + FileName                 + '\n'
+               + '  ApplySessionDuration: ' + ApplySessionDuration     + '\n'
+               + '  AssumeAllRoles:       ' + AssumeAllRoles           + '\n'
+               + '  RoleArns:             ' + JSON.stringify(RoleArns) + '\n'
+               );
 }
