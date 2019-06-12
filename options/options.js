@@ -75,7 +75,7 @@ function restore_options() {
     ApplySessionDuration: 'yes',
     AssumeAllRoles: 'yes',
     RoleArns: {},
-    AccountAliases: {},
+    AccountAliases: [],
 	DebugLogs: 'no',
   }, function(items) {
 	// Set filename
@@ -103,7 +103,7 @@ function restore_options() {
 	}
 
   // Add Account Aliases to table
-	items.AccountAliases.map(aliasSet => addTableRow(
+  items.AccountAliases.map(aliasSet => addTableRow(
                                                     '#tr_header_aliases',
                                                     aliasSet.Alias,
                                                     aliasSet.AccountNumber,

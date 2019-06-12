@@ -1,3 +1,5 @@
+import * as LibSTS from './sts.mjs';
+
 // Global variables
 var FileName = 'credentials';
 var ApplySessionDuration = true;
@@ -6,9 +8,9 @@ var DebugLogs = false;
 var RoleArns = {};
 var LF = '\n';
 
-var config = {
-               AccountAliases : [],
-             }
+const globalConfig = {
+                       AccountAliases: [],
+                     };
 
 
 // When this background process starts, load variables from chrome storage
@@ -71,7 +73,7 @@ function onBeforeRequestEvent(details) {
   } else if (details.requestBody.raw) {
     var combined = new ArrayBuffer(0);
     details.requestBody.raw.forEach(function(element) {
-      var tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength); 
+      var tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength);
       tmp.set( new Uint8Array(combined), 0 );
       tmp.set( new Uint8Array(element.bytes),combined.byteLength );
       combined = tmp.buffer;
@@ -86,13 +88,11 @@ function onBeforeRequestEvent(details) {
     console.log(samlXmlDoc);
   }
   // Convert XML String to DOM
-  parser = new DOMParser()
-  domDoc = parser.parseFromString(samlXmlDoc, "text/xml");
+  const parser = new DOMParser()
+  const domDoc = parser.parseFromString(samlXmlDoc, "text/xml");
   // Get a list of claims (= AWS roles) from the SAML assertion
   var roleDomNodes = domDoc.querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/Role"]')[0].childNodes
   // Parse the PrincipalArn and the RoleArn from the SAML Assertion.
-  var PrincipalArn = '';
-  var RoleArn = '';
   var SAMLAssertion = undefined;
   var SessionDuration = domDoc.querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/SessionDuration"]')[0]
   var hasRoleIndex = false;
@@ -128,23 +128,33 @@ function onBeforeRequestEvent(details) {
     console.log('hasRoleIndex: ' + hasRoleIndex);
     console.log('roleIndex: ' + roleIndex);
   }
-  
+
    // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter to determine the role to assume
   if (roleDomNodes.length > 1 && hasRoleIndex) {
-    for (i = 0; i < roleDomNodes.length; i++) {
+    for (let i = 0; i < roleDomNodes.length; i++) {
       var nodeValue = roleDomNodes[i].innerHTML;
       if (nodeValue.indexOf(roleIndex) > -1) {
         // This DomNode holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
-		    // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-		    extractPrincipalPlusRoleAndAssumeRole(nodeValue, SAMLAssertion, SessionDuration)
+       // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
+        extractPrincipalPlusRoleAndAssumeRole(
+                                               nodeValue,
+                                               SAMLAssertion,
+                                               SessionDuration,
+                                               roleDomNodes,
+                                             );
       }
     }
   }
   // If there is just 1 role in the claim there will be no 'roleIndex' in the form data.
   else if (roleDomNodes.length == 1) {
     // When there is just 1 role in the claim, use these details for the assumeRoleWithSAML API call
-	  // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-	  extractPrincipalPlusRoleAndAssumeRole(roleDomNodes[0].innerHTML, SAMLAssertion, SessionDuration)
+    // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
+    extractPrincipalPlusRoleAndAssumeRole(
+                                           roleDomNodes[0].innerHTML,
+                                           SAMLAssertion,
+                                           SessionDuration,
+                                           roleDomNodes,
+                                         );
   }
 }
 
@@ -154,15 +164,20 @@ function onBeforeRequestEvent(details) {
 // Gets a Role Attribute from a SAMLAssertion as function argument. Gets the SAMLAssertion as a second argument.
 // This function extracts the RoleArn and PrincipalArn (SAML-provider)
 // from this argument and uses it to call the AWS STS assumeRoleWithSAML API.
-async function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, SessionDuration) {
+async function extractPrincipalPlusRoleAndAssumeRole(
+                                                      samlattribute,
+                                                      SAMLAssertion,
+                                                      SessionDuration,
+                                                      roleDomNodes,
+                                                    ) {
 	// Pattern for Role
 	var reRole = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
 	// Patern for Principal (SAML Provider)
 	var rePrincipal = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
 	// Extraxt both regex patterns from SAMLAssertion attribute
-	RoleArn = samlattribute.match(reRole)[0];
-	PrincipalArn = samlattribute.match(rePrincipal)[0];
-  
+	const RoleArn = samlattribute.match(reRole)[0];
+	const PrincipalArn = samlattribute.match(rePrincipal)[0];
+
   if (DebugLogs) {
     console.log('RoleArn: ' + RoleArn);
     console.log('PrincipalArn: ' + PrincipalArn);
@@ -193,8 +208,9 @@ async function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertio
         docContent += await assumeAdditionalSamlRoles(
                                                        sts,
                                                        SAMLAssertion,
-                                                       config,
-                                                       RoleArn,
+                                                       globalConfig,
+                                                       params.RoleArn,
+                                                       roleDomNodes,
                                                      );
       }
 
@@ -225,23 +241,23 @@ async function assumeAdditionalSamlRoles(
                                           samlResponse,
                                           config,
                                           defaultRole,
+                                          roleDomNodes,
                                         ) {
   const roleAttributeName  = 'https://aws.amazon.com/SAML/Attributes/Role';
 
-  return new LibSaml(samlResponse)
-             .getAttribute(roleAttributeName)
-             .filter(x => !x.match(defaultRole))
-             .map(role => LibSTS.assumeRole(
-                                             config,
-                                             console,
-                                             sts,
-                                             role,
-                                             samlResponse
-                                           ))
-             .filter(x => x != null) // filter roles which could not be assumed.
-             .map(identity => createCredentialBlock(identity))
-             .map(credBlock => substituteAccountAlias(credBlock, config))
-             .reduce((doc, credBlock) => buildDocument(doc, credBlock), '')
+  return roleDomNodes
+           .getAttribute(roleAttributeName)
+           .filter(x => !x.match(defaultRole))
+           .map(role => LibSTS.assumeRole(
+                                           config,
+                                           console,
+                                           sts,
+                                           role,
+                                           samlResponse
+                                         ))
+           .map(identity => createCredentialBlock(identity))
+           .map(credBlock => substituteAccountAlias(credBlock, config))
+           .reduce((doc, credBlock) => buildDocument(doc, credBlock), '')
 }
 
 
@@ -304,7 +320,7 @@ function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, 
 			"aws_access_key_id = " + data.Credentials.AccessKeyId + LF +
 			"aws_secret_access_key = " + data.Credentials.SecretAccessKey + LF +
       "aws_session_token = " + data.Credentials.SessionToken;
-      
+
       if (DebugLogs) {
         console.log('DEBUG: Successfully assumed additional Role');
         console.log('docContent:');
@@ -325,7 +341,7 @@ function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, 
 
 
 // Called from either extractPrincipalPlusRoleAndAssumeRole (if RoleArns dict is empty)
-// Otherwise called from assumeAdditionalRole as soon as all roles from RoleArns have been assumed 
+// Otherwise called from assumeAdditionalRole as soon as all roles from RoleArns have been assumed
 function outputDocAsDownload(docContent) {
   if (DebugLogs) {
     console.log('DEBUG: Now going to download credentials file. Document content:');
@@ -389,7 +405,7 @@ function loadItemsFromStorage() {
       DebugLogs = true;
     }
     RoleArns = items.RoleArns;
-    config.AccountAliases = items.AccountAliases;
+    globalConfig.AccountAliases = items.AccountAliases;
   });
 
   console.debug(
@@ -398,6 +414,6 @@ function loadItemsFromStorage() {
                + '  ApplySessionDuration: ' + ApplySessionDuration     + '\n'
                + '  AssumeAllRoles:       ' + AssumeAllRoles           + '\n'
                + '  RoleArns:             ' + JSON.stringify(RoleArns) + '\n'
-               + '  AccountAliases:       ' + JSON.stringify(config.AccountAliases) + '\n'
+               + '  AccountAliases:       ' + JSON.stringify(globalConfig.AccountAliases) + '\n'
                );
 }
