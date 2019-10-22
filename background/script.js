@@ -36,7 +36,7 @@ function addOnBeforeRequestEventListener() {
   } else {
     chrome.webRequest.onBeforeRequest.addListener(
       onBeforeRequestEvent,
-      {urls: ["https://signin.aws.amazon.com/saml","https://signin.amazonaws-us-gov.com/saml"]},
+      {urls: ["https://*signin.aws.amazon.com/saml","https://*signin.amazonaws-us-gov.com/saml"]},
       ["requestBody"]
     );
     if (DebugLogs) console.log('DEBUG: onBeforeRequest Listener added');
