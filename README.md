@@ -18,12 +18,30 @@ You run into trouble as soon as you would like to execute some fancy scripts fro
 The Security Token Service (STS) from AWS provides an API action assumeRoleWithSAML. Using the SAML Assertion given by your IDP the Chrome Extension will call this API action to fetch temporary credentials. (AccessKeyId, SecretAccessKey and SessionToken). This way there is no need to create some sort of anonymous user in AWS IAM used for executing scripts. This would be a real security nightmare, since it won't be possible to audit who did what. This Chrome Extension however will make it super easy for you to just use your corporate identity for executing scripts calling AWS API's.
 
 ## <a name="gettingstarted"></a>Getting Started
-TODO
+
+1. Install the extension
+2. Login to the AWS console using your SAMLv2 SSO link. A file name `crendentials` should be automatically downloaded ![download illustration gif](README-download.gif)
+3. You can now use that `credentials` file just like your regular `~/.aws/credentials` file, or use it as an environment variable : `$ AWS_SHARED_CREDENTIALS_FILE=~/Downloads/credentials aws sts get-caller-identity`
+
+4. If you require to switch role to ultimately access your useful tokens, this extension can pre-populate your `crentials` file too
+
+![AWS switch role illustration](README-switchrole.png)
 
 ## <a name="symlink"></a>Create a symlink to your .aws directory (for Windows users)
-TODO
+
+A symbolic link (also called symlink) is a sort of shortcut that applications can use. You want to use a symlink for this extension because you don't want to copy-paste the `credentials` file each time you redownload it (i.e at least every few hours when then keys expires).
+
+With a cmd as administrator, create a symlink : `mklink C:\Users\USERNAME\.aws\credentials C:\Users\USERNAME\Downloads\credentials`
 
 ## <a name="faq"></a>FAQ: Frequently Asked Question
 1. Why can I not save file somewhere else?
+
 TODO
+
 2. How long are the credentials valid?
+
+TODO
+
+3. No file is downloading, why?
+
+see [this answser](https://github.com/prolane/samltoawsstskeys/issues/33#issuecomment-576747562) for debugging instructions.
