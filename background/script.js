@@ -55,7 +55,8 @@ function removeOnBeforeRequestEventListener() {
 
 // Callback function for the webRequest OnBeforeRequest EventListener
 // This function runs on each request to https://signin.aws.amazon.com/saml
-function onBeforeRequestEvent(details) {
+// This is where most of the magic of this extension comes together.
+async function onBeforeRequestEvent(details) {
   if (DebugLogs) console.log('DEBUG: onBeforeRequest event hit!');
   // Decode base64 SAML assertion in the request
   var samlXmlDoc = "";
@@ -123,14 +124,17 @@ function onBeforeRequestEvent(details) {
     console.log('roleIndex: ' + roleIndex);
   }
   
-   // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter to determine the role to assume
+  let roleNodeValue;
+  // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter 
+  // to determine the role to assume
   if (roleDomNodes.length > 1 && hasRoleIndex) {
     for (i = 0; i < roleDomNodes.length; i++) { 
       var nodeValue = roleDomNodes[i].innerHTML;
       if (nodeValue.indexOf(roleIndex) > -1) {
         // This DomNode holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
 		    // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-		    extractPrincipalPlusRoleAndAssumeRole(nodeValue, SAMLAssertion, SessionDuration)
+        //extractPrincipalPlusRoleAndAssumeRole(nodeValue, SAMLAssertion, SessionDuration)
+        roleNodeValue = nodeValue;
       }
     }
   }
@@ -138,124 +142,163 @@ function onBeforeRequestEvent(details) {
   else if (roleDomNodes.length == 1) {
     // When there is just 1 role in the claim, use these details for the assumeRoleWithSAML API call
 	  // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-	  extractPrincipalPlusRoleAndAssumeRole(roleDomNodes[0].innerHTML, SAMLAssertion, SessionDuration)
+    //extractPrincipalPlusRoleAndAssumeRole(roleDomNodes[0].innerHTML, SAMLAssertion, SessionDuration)
+    roleNodeValue = roleDomNodes[0].innerHTML;
   }
+  else {
+    return; // No need to proceed any further
+  }
+
+  let keys; // To store the AWS access and access secret key 
+  let credentials = ""; // Store all the content that needs to be written to the credentials file
+  // Call AWS STS API to get credentials using the SAML Assertion
+  try {
+    let result = await assumeRoleWithSAML(roleNodeValue, SAMLAssertion, SessionDuration);
+    keys = result; // Store the AWS credentials keys
+    // Append AWS credentials keys as string to 'credentials' variable
+    credentials = addProfileToCredentials(credentials, "default", keys.access_key_id, keys.secret_access_key, keys.session_token)
+  }
+  catch(err) {
+    console.log("ERROR: Error when trying to assume the IAM Role with the SAML Assertion.");
+    console.log(err, err.stack);
+    return;
+  }
+  // If there are extra Role ARNs configured in the options panel
+  // then assume each role to get credentials keys for each.
+  if (Object.keys(RoleArns).length > 0) {
+    if (DebugLogs) console.log('DEBUG: Additional Role ARNs are configured');
+    // Loop through each profile (each profile has a role ARN as value)
+    let profileList = Object.keys(RoleArns);
+    for (let i = 0; i < profileList.length; i++) {
+      console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[i]] + 
+      " with profile name '" + profileList[i] + "'.");
+      // Call AWS STS API to get credentials using Access Key ID and Secret Access Key as authentication
+      try {
+        let result = await assumeRole(RoleArns[profileList[i]], profileList[i],keys.access_key_id, keys.secret_access_key, keys.session_token, SessionDuration);
+        // Append AWS credentials keys as string to 'credentials' variable
+        credentials = addProfileToCredentials(credentials, profileList[i], result.access_key_id, result.secret_access_key, result.session_token)
+      }
+      catch(err) {
+        console.log("ERROR: Error when trying to assume additional IAM Role.");
+        console.log(err, err.stack);
+      }
+    }
+  } 
+
+  // Write credentials to file
+  console.log('Generate AWS tokens file.');
+  outputDocAsDownload(credentials);
 }
 
 
 
-// Called from 'onBeforeRequestEvent' function.
-// Gets a Role Attribute from a SAMLAssertion as function argument. Gets the SAMLAssertion as a second argument.
+// Gets a Role Attribute from a SAMLAssertion as function argument (roleNodeValue). 
 // This function extracts the RoleArn and PrincipalArn (SAML-provider)
 // from this argument and uses it to call the AWS STS assumeRoleWithSAML API.
-function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, SessionDuration) {
-	// Pattern for Role
-	var reRole = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
-	// Patern for Principal (SAML Provider)
-	var rePrincipal = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
-	// Extraxt both regex patterns from SAMLAssertion attribute
-	RoleArn = samlattribute.match(reRole)[0];
-	PrincipalArn = samlattribute.match(rePrincipal)[0];
-  
-  if (DebugLogs) {
-    console.log('RoleArn: ' + RoleArn);
-    console.log('PrincipalArn: ' + PrincipalArn);
-  }
+// Gets the SAMLAssertion as a second argument which is needed as authentication for the STS API.
+function assumeRoleWithSAML(roleNodeValue, SAMLAssertion, SessionDuration) {
+  return new Promise((resolve, reject) => {
+    // Pattern for Role
+    var reRole = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
+    // Patern for Principal (SAML Provider)
+    var rePrincipal = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
+    // Extraxt both regex patterns from the roleNodeValue (which is a SAMLAssertion attribute)
+    RoleArn = roleNodeValue.match(reRole)[0];
+    PrincipalArn = roleNodeValue.match(rePrincipal)[0];
+    
+    if (DebugLogs) {
+      console.log('RoleArn: ' + RoleArn);
+      console.log('PrincipalArn: ' + PrincipalArn);
+    }
 
-	// Set parameters needed for assumeRoleWithSAML method
-	var params = {
-		PrincipalArn: PrincipalArn,
-		RoleArn: RoleArn,
-		SAMLAssertion: SAMLAssertion
-	};
-  if (SessionDuration !== null) {
-    params['DurationSeconds'] = SessionDuration;
-  }
+    // Set parameters needed for AWS STS assumeRoleWithSAML API method
+    var params = {
+      PrincipalArn: PrincipalArn,
+      RoleArn: RoleArn,
+      SAMLAssertion: SAMLAssertion
+    };
+    if (SessionDuration !== null) {
+      params['DurationSeconds'] = SessionDuration;
+    }
 
-	// Call STS API from AWS
-	var sts = new AWS.STS();
-	sts.assumeRoleWithSAML(params, function(err, data) {
-		if (err) console.log(err, err.stack); // an error occurred
-		else {
-			// On succesful API response create file with the STS keys
-			var docContent = "[default]" + LF +
-			"aws_access_key_id = " + data.Credentials.AccessKeyId + LF +
-			"aws_secret_access_key = " + data.Credentials.SecretAccessKey + LF +
-			"aws_session_token = " + data.Credentials.SessionToken;
+    // Call STS API from AWS
+    var sts = new AWS.STS();
+    sts.assumeRoleWithSAML(params, function(err, data) {
+      if (err) reject(err);
+      else {
+        // On succesful API response, return the STS keys 
+        keys = {
+          access_key_id: data.Credentials.AccessKeyId,
+          secret_access_key: data.Credentials.SecretAccessKey,
+          session_token: data.Credentials.SessionToken,
+        }
+        if (DebugLogs) {
+          console.log('DEBUG: Successfully assumed default profile');
+          console.log('Received credentials:');
+          console.log(keys);
+        }
+        resolve(keys);
+      }        
+    }); // End of STS call
+  }); // End of Promise
+} // End of assumeRoleWithSAML function
 
-      if (DebugLogs) {
-        console.log('DEBUG: Successfully assumed default profile');
-        console.log('docContent:');
-        console.log(docContent);
+
+
+// Will fetch additional AWS credentials keys for 1 role
+// The assume-role API is called using the earlier fetched AWS credentials keys
+// (which where fetched using SAML) as authentication.
+function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey, SessionToken, SessionDuration) {
+  return new Promise((resolve, reject) => {
+    // Set the fetched STS keys from the SAML response as credentials for doing the API call
+    var options = {'accessKeyId': AccessKeyId, 'secretAccessKey': SecretAccessKey, 'sessionToken': SessionToken};
+    var sts = new AWS.STS(options);
+    // Set the parameters for the AssumeRole API call. Meaning: What role to assume
+    var params = {
+      RoleArn: roleArn,
+      RoleSessionName: roleSessionName
+    };
+    if (SessionDuration !== null) {
+      params['DurationSeconds'] = SessionDuration;
+    }
+    // Call the API
+    sts.assumeRole(params, function(err, data) {
+      if (err) reject(err);
+      else {
+        // On succesful API response, return the STS keys 
+        keys = {
+          access_key_id: data.Credentials.AccessKeyId,
+          secret_access_key: data.Credentials.SecretAccessKey,
+          session_token: data.Credentials.SessionToken,
+        }
+        if (DebugLogs) {
+          console.log("DEBUG: Successfully assumed additional Role. Profile name: '" + roleSessionName + "'.");
+          console.log("Received credentials:");
+          console.log(keys);
+        }
+        resolve(keys);
       }
-
-			// If there are no Role ARNs configured in the options panel, continue to create credentials file
-			// Otherwise, extend docContent with a profile for each specified ARN in the options panel
-			if (Object.keys(RoleArns).length == 0) {
-				console.log('Generate AWS tokens file.');
-				outputDocAsDownload(docContent);
-			} else {
-        if (DebugLogs) console.log('DEBUG: Additional Role ARNs are configured');
-				var profileList = Object.keys(RoleArns);
-				console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[0]]);
-				assumeAdditionalRole(profileList, 0, data.Credentials.AccessKeyId, data.Credentials.SecretAccessKey, data.Credentials.SessionToken, docContent, SessionDuration);
-			}
-		}        
-	});
-}
+    }); // End of STS call
+  }); // End of Promise
+} // End of assumeRole function
 
 
-// Will fetch additional STS keys for 1 role from the RoleArns dict
-// The assume-role API is called using the credentials (STS keys) fetched using the SAML claim. Basically the default profile.
-function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, SessionToken, docContent, SessionDuration) {
-	// Set the fetched STS keys from the SAML response as credentials for doing the API call
-	var options = {'accessKeyId': AccessKeyId, 'secretAccessKey': SecretAccessKey, 'sessionToken': SessionToken};
-	var sts = new AWS.STS(options);
-	// Set the parameters for the AssumeRole API call. Meaning: What role to assume
-	var params = {
-		RoleArn: RoleArns[profileList[index]],
-		RoleSessionName: profileList[index]
-	};
-  if (SessionDuration !== null) {
-    params['DurationSeconds'] = SessionDuration;
-  }
 
-  if (DebugLogs) {
-    console.log('RoleArn: ' + RoleArns[profileList[index]]);
-    console.log('RoleSessionName: ' + profileList[index]);
-  }
-
-	// Call the API
-	sts.assumeRole(params, function(err, data) {
-		if (err) console.log(err, err.stack); // an error occurred
-		else {
-			docContent += LF + LF +
-			"[" + profileList[index] + "]" + LF +
-			"aws_access_key_id = " + data.Credentials.AccessKeyId + LF +
-			"aws_secret_access_key = " + data.Credentials.SecretAccessKey + LF +
-      "aws_session_token = " + data.Credentials.SessionToken;
-      
-      if (DebugLogs) {
-        console.log('DEBUG: Successfully assumed additional Role');
-        console.log('docContent:');
-        console.log(docContent);
-      }
-		}
-		// If there are more profiles/roles in the RoleArns dict, do another call of assumeAdditionalRole to extend the docContent with another profile
-		// Otherwise, this is the last profile/role in the RoleArns dict. Proceed to creating the credentials file
-		if (index < profileList.length - 1) {
-			console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[index + 1]]);
-			assumeAdditionalRole(profileList, index + 1, AccessKeyId, SecretAccessKey, SessionToken, docContent);
-		} else {
-			outputDocAsDownload(docContent);
-		}
-	});
+// Append AWS credentials profile to the existing content of a credentials file
+function addProfileToCredentials(credentials, profileName, AccessKeyId, SecretAcessKey, SessionToken) {
+  credentials += "[" + profileName + "]" + LF +
+  "aws_access_key_id = " + AccessKeyId + LF +
+  "aws_secret_access_key = " + SecretAcessKey + LF +
+  "aws_session_token = " + SessionToken + LF +
+  LF;
+  return credentials;
 }
 
 
 
-// Called from either extractPrincipalPlusRoleAndAssumeRole (if RoleArns dict is empty)
-// Otherwise called from assumeAdditionalRole as soon as all roles from RoleArns have been assumed 
+// Takes the content of an AWS SDK 'credentials' file as argument and will
+// initiate a download in Chrome. 
+// It should be saved to Chrome's Download directory automatically.
 function outputDocAsDownload(docContent) {
   if (DebugLogs) {
     console.log('DEBUG: Now going to download credentials file. Document content:');
