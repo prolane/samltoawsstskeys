@@ -6,16 +6,25 @@
 		div.status {
 		    width:200px;
 		}
-		a.button {
-			-webkit-appearance: button;
-			-webkit-padding-after: 3px;
-			-webkit-padding-before: 3px;
-			-webkit-padding-end: 3px;
-			-webkit-padding-start: 3px;
+    .options{
+      font-size: 14px;
+    }
+		.optbutton {
+			padding: 8px 12px;
+			text-align: center;
 			text-decoration: none;
-			color: initial;
-			margin-top: 15px;
-		}
+			display: inline-block;
+			margin: 10px 0px 2px 0px;
+			transition-duration: 0.4s;
+			cursor: pointer;
+      background-color: white;
+      color: black;
+      border: 2px solid #555555;
+    }
+    .optbutton:hover {
+      background-color: #555555;
+      color: white;
+    }
 	</style>
   </head>
 
@@ -23,9 +32,11 @@
 
     <div class="status">
     	<h3>SAML to AWS STS Keys</h3>
-    	<label>Activated:</label><input type="checkbox" id="chkboxactivated"></input>
+    	<label class="options">Activated:</label><input type="checkbox" id="chkboxactivated"></input>
 		<br />
-		<a href="../options/options.html" target="_blank" class="button">Options</a>
+		<a href="../options/options.html" target="_blank" class="button">
+			<button class="optbutton options">Options</button>
+		</a>
     </div>
 
     <script src="popup.js"></script>
