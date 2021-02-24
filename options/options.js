@@ -4,7 +4,7 @@ function save_options() {
   var FileName = document.getElementById('FileName').value;
   
   // Does SessionDuration needs to be applied?
-	var ApplySessionDuration = $("#SessionDuration option:selected").val();
+  var ApplySessionDuration = $("#SessionDuration option:selected").val();
 	
 	// Is DEBUG log enabled?
   var DebugLogs = $("#DebugLogs option:selected").val();

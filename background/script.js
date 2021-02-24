@@ -1,9 +1,13 @@
 // Global variables
-var FileName = 'credentials';
-var ApplySessionDuration = true;
-var DebugLogs = false;
-var RoleArns = {};
-var LF = '\n';
+let FileName = 'credentials';
+let ApplySessionDuration = true;
+let DebugLogs = false;
+let RoleArns = {};
+let LF = '\n';
+// Change newline sequence when client is on Windows
+if (navigator.userAgent.indexOf('Windows')  !== -1) {
+  LF = '\r\n'
+}
 
 // When this background process starts, load variables from chrome storage 
 // from saved Extension Options
@@ -15,9 +19,8 @@ chrome.storage.sync.get({
   }, function(item) {
     if (item.Activated) addOnBeforeRequestEventListener();
 });
-// Additionally on start of the background process it is checked if a new version of the plugin is installed.
-// If so, show the user the changelog
-// var thisVersion = chrome.runtime.getManifest().version;
+// Additionally on start of the background process it is checked if a new version
+// of the plugin is installed. If so, show the user the changelog.
 chrome.runtime.onInstalled.addListener(function(details){
 	if(details.reason == "install" || details.reason == "update"){
 		// Open a new tab to show changelog html page
@@ -32,7 +35,8 @@ chrome.runtime.onInstalled.addListener(function(details){
 function addOnBeforeRequestEventListener() {
   if (DebugLogs) console.log('DEBUG: Extension is activated');
   if (chrome.webRequest.onBeforeRequest.hasListener(onBeforeRequestEvent)) {
-    console.log("ERROR: onBeforeRequest EventListener could not be added, because onBeforeRequest already has an EventListener.");
+    console.log("ERROR: onBeforeRequest EventListener could not be added, because " +
+    "onBeforeRequest already has an EventListener.");
   } else {
     chrome.webRequest.onBeforeRequest.addListener(
       onBeforeRequestEvent,
@@ -58,96 +62,91 @@ function removeOnBeforeRequestEventListener() {
 // This is where most of the magic of this extension comes together.
 async function onBeforeRequestEvent(details) {
   if (DebugLogs) console.log('DEBUG: onBeforeRequest event hit!');
-  // Decode base64 SAML assertion in the request
-  var samlXmlDoc = "";
-  var formDataPayload = undefined;
+  // Get the SAML payload
+  let samlXmlDoc = "";
+  let formDataPayload = undefined;
+  let SAMLAssertion = undefined;
+  var roleIndex = undefined;
+  // The SAML payload should normally be present as HTTP POST parameter 'SAMLResponse'
+  // In reality, since Chrome 62 this broke for certain users. Although not for everyone.
+  // As a backup, the raw request body can be used to extract the SAML payload.
   if (details.requestBody.formData) {
-    samlXmlDoc = decodeURIComponent(unescape(window.atob(details.requestBody.formData.SAMLResponse[0])));
+    if (DebugLogs) console.log('DEBUG: formData present.');
+    // Decode the base64 encoded SAML payload. This will get us the the SAML payload (which is XML)
+    SAMLAssertion = details.requestBody.formData.SAMLResponse[0];
+    samlXmlDoc = decodeURIComponent(unescape(window.atob(SAMLAssertion)));
+    // If the user is authorized for multiple IAM roles, the user will have made a choice for one
+    // of these roles. The chosen role can be read from 'roleIndex'
+    if ("roleIndex" in details.requestBody.formData) {
+      roleIndex = details.requestBody.formData.roleIndex[0];
+    }
   } else if (details.requestBody.raw) {
-    var combined = new ArrayBuffer(0);
+    let combined = new ArrayBuffer(0);
     details.requestBody.raw.forEach(function(element) { 
-      var tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength); 
+      let tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength); 
       tmp.set( new Uint8Array(combined), 0 ); 
       tmp.set( new Uint8Array(element.bytes),combined.byteLength ); 
       combined = tmp.buffer;
     });
-    var combinedView = new DataView(combined);
-    var decoder = new TextDecoder('utf-8');
+    let combinedView = new DataView(combined);
+    let decoder = new TextDecoder('utf-8');
     formDataPayload = new URLSearchParams(decoder.decode(combinedView));
-    samlXmlDoc = decodeURIComponent(unescape(window.atob(formDataPayload.get('SAMLResponse'))))
+    // Decode the base64 encoded SAML payload. This will get us the the SAML payload (which is XML)
+    SAMLAssertion = formDataPayload.get('SAMLResponse');
+    samlXmlDoc = decodeURIComponent(unescape(window.atob(SAMLAssertion)))
+    // If the user is authorized for multiple IAM roles, the user will have made a choice for one
+    // of these roles. The chosen role can be read from 'roleIndex'
+    roleIndex = formDataPayload.get('roleIndex'); // Will return 'null' if not found
   }
   if (DebugLogs) {
     console.log('DEBUG: samlXmlDoc:');
     console.log(samlXmlDoc);
   }
-  // Convert XML String to DOM
+  // Parse the SAML XML document as DOM. This makes it easier to query data.
   parser = new DOMParser()
   domDoc = parser.parseFromString(samlXmlDoc, "text/xml");
-  // Get a list of claims (= AWS roles) from the SAML assertion
-  var roleDomNodes = domDoc.querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/Role"]')[0].childNodes
-  // Parse the PrincipalArn and the RoleArn from the SAML Assertion.
-  var PrincipalArn = '';
-  var RoleArn = '';
-  var SAMLAssertion = undefined;
-  var SessionDuration = domDoc.querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/SessionDuration"]')[0]
-  var hasRoleIndex = false;
-  var roleIndex = undefined;
-  if (details.requestBody.formData) {
-    SAMLAssertion = details.requestBody.formData.SAMLResponse[0];
-    if ("roleIndex" in details.requestBody.formData) {
-      hasRoleIndex = true;
-      roleIndex = details.requestBody.formData.roleIndex[0];
-    }
-  } else if (formDataPayload) {
-    SAMLAssertion = formDataPayload.get('SAMLResponse');
-    roleIndex = formDataPayload.get('roleIndex');
-    hasRoleIndex = roleIndex != undefined;
-  }
-
+  // Get the list of AWS roles (i.e. SAML claim) from the SAML assertion
+  let roleDomNodes = domDoc.querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/Role"]')[0].childNodes
   // Only set the SessionDuration if it was supplied by the SAML provider and 
   // when the user has configured to use this feature.
+  let SessionDuration = domDoc.querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/SessionDuration"]')[0]
   if (SessionDuration !== undefined && ApplySessionDuration) {
     SessionDuration = Number(SessionDuration.firstElementChild.textContent)
   } else {
     SessionDuration = null;
   }
 
-  // Change newline sequence when client is on Windows
-  if (navigator.userAgent.indexOf('Windows')  !== -1) {
-    LF = '\r\n'
-  }
-
   if (DebugLogs) {
     console.log('ApplySessionDuration: ' + ApplySessionDuration);
     console.log('SessionDuration: ' + SessionDuration);
-    console.log('hasRoleIndex: ' + hasRoleIndex);
     console.log('roleIndex: ' + roleIndex);
   }
   
   let roleNodeValue;
-  // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter 
-  // to determine the role to assume
-  if (roleDomNodes.length > 1 && hasRoleIndex) {
+  // If there is more than 1 role in the claim and roleIndex is set (therefore 'true'), then 
+  // look at the 'roleIndex' HTTP Form data parameter to determine the role to assume.
+  if (roleDomNodes.length > 1 && roleIndex) {
+    if (DebugLogs) console.log('DEBUG: More than one role claimed and role chosen.');
     for (i = 0; i < roleDomNodes.length; i++) { 
-      var nodeValue = roleDomNodes[i].innerHTML;
+      let nodeValue = roleDomNodes[i].innerHTML;
       if (nodeValue.indexOf(roleIndex) > -1) {
-        // This DomNode holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
-		    // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-        //extractPrincipalPlusRoleAndAssumeRole(nodeValue, SAMLAssertion, SessionDuration)
+        // This DomNode holdes the data for the role to assume.
+        // (i.e. the ARN for the IAM role and the ARN of the saml-provider resource)
         roleNodeValue = nodeValue;
       }
     }
   }
   // If there is just 1 role in the claim there will be no 'roleIndex' in the form data.
   else if (roleDomNodes.length == 1) {
-    // When there is just 1 role in the claim, use these details for the assumeRoleWithSAML API call
-	  // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-    //extractPrincipalPlusRoleAndAssumeRole(roleDomNodes[0].innerHTML, SAMLAssertion, SessionDuration)
+    // This DomNode holdes the data for the role to assume.
+    // (i.e. the ARN for the IAM role and the ARN of the saml-provider resource)
     roleNodeValue = roleDomNodes[0].innerHTML;
   }
   else {
+    if (DebugLogs) console.log('DEBUG: Not known which role to assume.');
     return; // No need to proceed any further
   }
+  if (DebugLogs) console.log('DEBUG: roleNodeValue: ' + roleNodeValue);
 
   let keys; // To store the AWS access and access secret key 
   let credentials = ""; // Store all the content that needs to be written to the credentials file
@@ -156,7 +155,8 @@ async function onBeforeRequestEvent(details) {
     let result = await assumeRoleWithSAML(roleNodeValue, SAMLAssertion, SessionDuration);
     keys = result; // Store the AWS credentials keys
     // Append AWS credentials keys as string to 'credentials' variable
-    credentials = addProfileToCredentials(credentials, "default", keys.access_key_id, keys.secret_access_key, keys.session_token)
+    credentials = addProfileToCredentials(credentials, "default", keys.access_key_id, 
+      keys.secret_access_key, keys.session_token)
   }
   catch(err) {
     console.log("ERROR: Error when trying to assume the IAM Role with the SAML Assertion.");
@@ -174,9 +174,11 @@ async function onBeforeRequestEvent(details) {
       " with profile name '" + profileList[i] + "'.");
       // Call AWS STS API to get credentials using Access Key ID and Secret Access Key as authentication
       try {
-        let result = await assumeRole(RoleArns[profileList[i]], profileList[i],keys.access_key_id, keys.secret_access_key, keys.session_token, SessionDuration);
+        let result = await assumeRole(RoleArns[profileList[i]], profileList[i], keys.access_key_id,
+          keys.secret_access_key, keys.session_token, SessionDuration);
         // Append AWS credentials keys as string to 'credentials' variable
-        credentials = addProfileToCredentials(credentials, profileList[i], result.access_key_id, result.secret_access_key, result.session_token)
+        credentials = addProfileToCredentials(credentials, profileList[i], result.access_key_id,
+          result.secret_access_key, result.session_token);
       }
       catch(err) {
         console.log("ERROR: Error when trying to assume additional IAM Role.");
@@ -192,10 +194,10 @@ async function onBeforeRequestEvent(details) {
 
 
 
-// Gets a Role Attribute from a SAMLAssertion as function argument (roleNodeValue). 
+// Takes a Role Attribute from a SAMLAssertion as function argument (roleNodeValue). 
 // This function extracts the RoleArn and PrincipalArn (SAML-provider)
 // from this argument and uses it to call the AWS STS assumeRoleWithSAML API.
-// Gets the SAMLAssertion as a second argument which is needed as authentication for the STS API.
+// Takes the SAMLAssertion as a second argument which is needed as authentication for the STS API.
 function assumeRoleWithSAML(roleNodeValue, SAMLAssertion, SessionDuration) {
   return new Promise((resolve, reject) => {
     // Pattern for Role
@@ -227,7 +229,7 @@ function assumeRoleWithSAML(roleNodeValue, SAMLAssertion, SessionDuration) {
       if (err) reject(err);
       else {
         // On succesful API response, return the STS keys 
-        keys = {
+        let keys = {
           access_key_id: data.Credentials.AccessKeyId,
           secret_access_key: data.Credentials.SecretAccessKey,
           session_token: data.Credentials.SessionToken,
@@ -248,10 +250,15 @@ function assumeRoleWithSAML(roleNodeValue, SAMLAssertion, SessionDuration) {
 // Will fetch additional AWS credentials keys for 1 role
 // The assume-role API is called using the earlier fetched AWS credentials keys
 // (which where fetched using SAML) as authentication.
-function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey, SessionToken, SessionDuration) {
+function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey,
+  SessionToken, SessionDuration) {
   return new Promise((resolve, reject) => {
     // Set the fetched STS keys from the SAML response as credentials for doing the API call
-    var options = {'accessKeyId': AccessKeyId, 'secretAccessKey': SecretAccessKey, 'sessionToken': SessionToken};
+    var options = {
+      'accessKeyId': AccessKeyId,
+      'secretAccessKey': SecretAccessKey,
+      'sessionToken': SessionToken
+    };
     var sts = new AWS.STS(options);
     // Set the parameters for the AssumeRole API call. Meaning: What role to assume
     var params = {
@@ -266,13 +273,14 @@ function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey, Sess
       if (err) reject(err);
       else {
         // On succesful API response, return the STS keys 
-        keys = {
+        let keys = {
           access_key_id: data.Credentials.AccessKeyId,
           secret_access_key: data.Credentials.SecretAccessKey,
           session_token: data.Credentials.SessionToken,
         }
         if (DebugLogs) {
-          console.log("DEBUG: Successfully assumed additional Role. Profile name: '" + roleSessionName + "'.");
+          console.log("DEBUG: Successfully assumed additional Role. Profile name: '" + 
+            roleSessionName + "'.");
           console.log("Received credentials:");
           console.log(keys);
         }
@@ -287,9 +295,9 @@ function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey, Sess
 // Append AWS credentials profile to the existing content of a credentials file
 function addProfileToCredentials(credentials, profileName, AccessKeyId, SecretAcessKey, SessionToken) {
   credentials += "[" + profileName + "]" + LF +
-  "aws_access_key_id = " + AccessKeyId + LF +
-  "aws_secret_access_key = " + SecretAcessKey + LF +
-  "aws_session_token = " + SessionToken + LF +
+  "aws_access_key_id=" + AccessKeyId + LF +
+  "aws_secret_access_key=" + SecretAcessKey + LF +
+  "aws_session_token=" + SessionToken + LF +
   LF;
   return credentials;
 }
