@@ -1,5 +1,15 @@
 # Changelog
 
+## 2019-feb-8 (v2.7)
+* Changed permissions. The extension will now ask access to any requested URL. This is needed because of changed policy in Chrome 72 for the chrome.webRequest API. Read [here](https://github.com/prolane/samltoawsstskeys/issues/28#issuecomment-461938267) for the rationale behind it. Fixes [#28](https://github.com/prolane/samltoawsstskeys/issues/28).
+
+## 2019-feb-7 (v2.6)
+* Adds the option to enable debug logs
+
+## 2018-nov-15 (v2.5)
+* Implements CRLF as newlines in the credentials file when the client is on Windows. Fixes [#21](https://github.com/prolane/samltoawsstskeys/issues/21)
+* Removes unnecessary spaces prior the newlines in credentials file. Fixes [#14](https://github.com/prolane/samltoawsstskeys/issues/14)
+
 ## 2018-aug-2 (v2.4)
 * Bug fix for users with one IAM role in the SAML claim. Bug was introduced with release 2.1, but according to user reports only results in an error starting with Chrome release 68.
 
