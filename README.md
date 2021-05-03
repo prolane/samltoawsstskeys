@@ -18,6 +18,11 @@ The Security Token Service (STS) from AWS provides an API action assumeRoleWithS
 Once you install the app, it will download a credentials file into your downloads folder each time you assume an AWS role.
 
 You will need to load it into Chrome as an "unpacked extension" from the Chrome Extensions menu.
+1. Pull the repo down locally
+2. In Chrome, go to More Tools > Extensions > Load Unpacked
+3. Select the samltoawsstskeys folder (ie this repo)
+
+Additionally, you may need to manually pin the extension in your Chrome address bar's extension section - this will allow you to enable/ disable the extension if requried
 
 ## <a name="symlink"></a>Create a symlink to your .aws directory (for Windows users)
 We use our own version of a Chrome Extension which will automatically download a set of credentials for you when you assume the AWS role via GSuite - this will add temporary credentials into your downloads folder, which you can reference with a symlink from your .aws folder.
