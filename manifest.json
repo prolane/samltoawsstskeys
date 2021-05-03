@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "author": "G.T.C. Laan (prolane.org)",
-  "homepage_url": "https://github.com/prolane/samltoawsstskeys",
-  "name": "SAML to AWS STS Keys Conversion",
+  "author": "EP, originally from G.T.C. Laan (prolane.org)",
+  "homepage_url": "https://github.com/EducationPerfect/samltoawsstskeys",
+  "name": "Education Perfect SAML to AWS STS Keys Conversion",
   "description": "Generates file with AWS STS Keys after logging in to AWS webconsole using SSO (SAML 2.0). It leverages 'assumeRoleWithSAML' API.",
   "version": "2.7",
   "icons": {  "16": "icons/icon_16.png",
