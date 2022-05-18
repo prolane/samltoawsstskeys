@@ -21,7 +21,10 @@ The Security Token Service (STS) from AWS provides an API action assumeRoleWithS
 TODO
 
 ## <a name="symlink"></a>Create a symlink to your .aws directory (for Windows users)
-TODO
+You can run this command line in PowerShell to create a symbolic link
+```powershell
+New-Item -ItemType SymbolicLink -Path "C:\Users\$env:UserName\.aws\credentials" -Target "C:\Users\$env:UserName\Downloads\credentials"
+```
 
 ## <a name="faq"></a>FAQ: Frequently Asked Question
 1. Why can I not save file somewhere else?
