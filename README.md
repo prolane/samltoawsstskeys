@@ -4,6 +4,8 @@ Google Chrome Extension which converts a SAML 2.0 assertion to AWS STS Keys (tem
 The Chrome Extension can be downloaded here:
 [Google Chrome Web Store](https://chrome.google.com/webstore/detail/ekniobabpcnfjgfbphhcolcinmnbehde/)
 
+> The source of this extension is also used as [extension](https://addons.mozilla.org/en-US/firefox/addon/saml-to-aws-sts-keys/) for Mozilla FireFox. For specific FireFox related questions you can get in touch with my awesome friend @gbvanrenswoude.
+
 # Table of Contents
 * [Why this Chrome Extension?](#why)
 * [Getting Started](#gettingstarted)
