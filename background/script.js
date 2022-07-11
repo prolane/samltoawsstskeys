@@ -1,3 +1,5 @@
+importScripts(["../lib/aws-sdk-2.7.5.min.js"])
+
 // Global variables
 var FileName = 'credentials';
 var ApplySessionDuration = true;
@@ -62,6 +64,7 @@ function onBeforeRequestEvent(details) {
   var formDataPayload = undefined;
   if (details.requestBody.formData) {
     samlXmlDoc = decodeURIComponent(unescape(window.atob(details.requestBody.formData.SAMLResponse[0])));
+    console.log(samlXmlDoc)
   } else if (details.requestBody.raw) {
     var combined = new ArrayBuffer(0);
     details.requestBody.raw.forEach(function(element) { 
