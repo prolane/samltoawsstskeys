@@ -1,4 +1,7 @@
-importScripts(["../lib/aws-sdk-2.7.5.min.js"])
+importScripts(
+  "../lib/aws-sdk-2.7.5.min.js",
+  "../lib/fxparser.min.js" // https://github.com/NaturalIntelligence/fast-xml-parser
+)
 
 // Global variables
 var FileName = 'credentials';
@@ -63,8 +66,7 @@ function onBeforeRequestEvent(details) {
   var samlXmlDoc = "";
   var formDataPayload = undefined;
   if (details.requestBody.formData) {
-    samlXmlDoc = decodeURIComponent(unescape(window.atob(details.requestBody.formData.SAMLResponse[0])));
-    console.log(samlXmlDoc)
+    samlXmlDoc = decodeURIComponent(unescape(atob(details.requestBody.formData.SAMLResponse[0])));
   } else if (details.requestBody.raw) {
     var combined = new ArrayBuffer(0);
     details.requestBody.raw.forEach(function(element) { 
@@ -76,22 +78,35 @@ function onBeforeRequestEvent(details) {
     var combinedView = new DataView(combined);
     var decoder = new TextDecoder('utf-8');
     formDataPayload = new URLSearchParams(decoder.decode(combinedView));
-    samlXmlDoc = decodeURIComponent(unescape(window.atob(formDataPayload.get('SAMLResponse'))))
+    samlXmlDoc = decodeURIComponent(unescape(atob(formDataPayload.get('SAMLResponse'))))
   }
   if (DebugLogs) {
     console.log('DEBUG: samlXmlDoc:');
     console.log(samlXmlDoc);
   }
-  // Convert XML String to DOM
-  parser = new DOMParser()
-  domDoc = parser.parseFromString(samlXmlDoc, "text/xml");
-  // Get a list of claims (= AWS roles) from the SAML assertion
-  var roleDomNodes = domDoc.querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/Role"]')[0].childNodes
-  // Parse the PrincipalArn and the RoleArn from the SAML Assertion.
-  var PrincipalArn = '';
-  var RoleArn = '';
+
+  // Convert XML to JS object
+  options = {
+    ignoreAttributes: false,
+    attributeNamePrefix : "__"
+  };
+  parser = new XMLParser(options);
+  jsObj = parser.parse(samlXmlDoc);
+  // Get all attributes from the SAML Assertion
+  attributes = jsObj["samlp:Response"].Assertion.AttributeStatement.Attribute
+  // Loop through attributes to find the required ones
+  for (let i in attributes) {
+    if (attributes[i].__Name == "https://aws.amazon.com/SAML/Attributes/Role") {
+      attributes_role_list = attributes[i].AttributeValue
+    }
+    if (attributes[i].__Name == "https://aws.amazon.com/SAML/Attributes/SessionDuration") {
+      sessionduration = attributes[i].AttributeValue
+    }
+  }
+
+  // Get the base64 encoded SAML Response from the IDP
+  // and check if user provided a choice (roleIndex) for any of the roles
   var SAMLAssertion = undefined;
-  var SessionDuration = domDoc.querySelectorAll('[Name="https://aws.amazon.com/SAML/Attributes/SessionDuration"]')[0]
   var hasRoleIndex = false;
   var roleIndex = undefined;
   if (details.requestBody.formData) {
@@ -108,10 +123,8 @@ function onBeforeRequestEvent(details) {
 
   // Only set the SessionDuration if it was supplied by the SAML provider and 
   // when the user has configured to use this feature.
-  if (SessionDuration !== undefined && ApplySessionDuration) {
-    SessionDuration = Number(SessionDuration.firstElementChild.textContent)
-  } else {
-    SessionDuration = null;
+  if (sessionduration == undefined || !ApplySessionDuration) {
+    sessionduration = null
   }
 
   // Change newline sequence when client is on Windows
@@ -121,27 +134,30 @@ function onBeforeRequestEvent(details) {
 
   if (DebugLogs) {
     console.log('ApplySessionDuration: ' + ApplySessionDuration);
-    console.log('SessionDuration: ' + SessionDuration);
+    console.log('SessionDuration: ' + sessionduration);
     console.log('hasRoleIndex: ' + hasRoleIndex);
     console.log('roleIndex: ' + roleIndex);
   }
   
    // If there is more than 1 role in the claim, look at the 'roleIndex' HTTP Form data parameter to determine the role to assume
-  if (roleDomNodes.length > 1 && hasRoleIndex) {
-    for (i = 0; i < roleDomNodes.length; i++) { 
-      var nodeValue = roleDomNodes[i].innerHTML;
-      if (nodeValue.indexOf(roleIndex) > -1) {
-        // This DomNode holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
+  if (attributes_role_list.length > 1 && hasRoleIndex) {
+    for (i = 0; i < attributes_role_list.length; i++) { 
+      let attributes_role = attributes_role_list[i];
+      if (attributes_role.indexOf(roleIndex) > -1) {
+        // This attribute holdes the data for the role to assume. Use these details for the assumeRoleWithSAML API call
 		    // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-		    extractPrincipalPlusRoleAndAssumeRole(nodeValue, SAMLAssertion, SessionDuration)
+		    extractPrincipalPlusRoleAndAssumeRole(attributes_role, SAMLAssertion, sessionduration)
       }
     }
   }
   // If there is just 1 role in the claim there will be no 'roleIndex' in the form data.
-  else if (roleDomNodes.length == 1) {
+  else if (attributes_role_list.length == undefined) {
     // When there is just 1 role in the claim, use these details for the assumeRoleWithSAML API call
 	  // The Role Attribute from the SAMLAssertion (DomNode) plus the SAMLAssertion itself is given as function arguments.
-	  extractPrincipalPlusRoleAndAssumeRole(roleDomNodes[0].innerHTML, SAMLAssertion, SessionDuration)
+    //
+    // If there is just one role, the XMLParser does not create a list
+    attributes_role = attributes_role_list
+	  extractPrincipalPlusRoleAndAssumeRole(attributes_role, SAMLAssertion, sessionduration)
   }
 }
 
