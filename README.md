@@ -29,3 +29,5 @@ TODO
 1. Why can I not save file somewhere else?
 TODO
 2. How long are the credentials valid?
+3. I don't see a file in the download folder. How comes? 
+The file will be written when you log on, when you are already logged in when you activate the plugin, it will not write a file.
