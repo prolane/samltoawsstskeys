@@ -3,11 +3,11 @@ importScripts(
 )
 
 // Global variables
-var FileName = 'credentials';
-var ApplySessionDuration = true;
-var DebugLogs = false;
-var RoleArns = {};
-var LF = '\n';
+let FileName = 'credentials';
+let ApplySessionDuration = true;
+let DebugLogs = false;
+let RoleArns = {};
+let LF = '\n';
 
 // When this background process starts, load variables from chrome storage 
 // from saved Extension Options
@@ -61,22 +61,27 @@ function removeOnBeforeRequestEventListener() {
 // This function runs on each request to https://signin.aws.amazon.com/saml
 function onBeforeRequestEvent(details) {
   if (DebugLogs) console.log('DEBUG: onBeforeRequest event hit!');
-  // Decode base64 SAML assertion in the request
-  var samlXmlDoc = "";
-  var formDataPayload = undefined;
+  // Get the SAML payload
+  let samlXmlDoc = "";
+  let formDataPayload = undefined;
+  // The SAML payload should normally be present as HTTP POST parameter 'SAMLResponse'
+  // In reality, since Chrome 62 this broke for certain users. Although not for everyone.
+  // As a backup, the raw request body can be used to extract the SAML payload.
   if (details.requestBody.formData) {
+    // Decode the base64 encoded SAML payload. This will get us the the SAML payload (which is XML)
     samlXmlDoc = decodeURIComponent(unescape(atob(details.requestBody.formData.SAMLResponse[0])));
   } else if (details.requestBody.raw) {
-    var combined = new ArrayBuffer(0);
+    let combined = new ArrayBuffer(0);
     details.requestBody.raw.forEach(function(element) { 
-      var tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength); 
+      let tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength); 
       tmp.set( new Uint8Array(combined), 0 ); 
       tmp.set( new Uint8Array(element.bytes),combined.byteLength ); 
       combined = tmp.buffer;
     });
-    var combinedView = new DataView(combined);
-    var decoder = new TextDecoder('utf-8');
+    let combinedView = new DataView(combined);
+    let decoder = new TextDecoder('utf-8');
     formDataPayload = new URLSearchParams(decoder.decode(combinedView));
+    // Decode the base64 encoded SAML payload. This will get us the the SAML payload (which is XML)
     samlXmlDoc = decodeURIComponent(unescape(atob(formDataPayload.get('SAMLResponse'))))
   }
   if (DebugLogs) {
@@ -105,9 +110,9 @@ function onBeforeRequestEvent(details) {
 
   // Get the base64 encoded SAML Response from the IDP
   // and check if user provided a choice (roleIndex) for any of the roles
-  var SAMLAssertion = undefined;
-  var hasRoleIndex = false;
-  var roleIndex = undefined;
+  let SAMLAssertion = undefined;
+  let hasRoleIndex = false;
+  let roleIndex = undefined;
   if (details.requestBody.formData) {
     SAMLAssertion = details.requestBody.formData.SAMLResponse[0];
     if ("roleIndex" in details.requestBody.formData) {
@@ -169,9 +174,9 @@ function onBeforeRequestEvent(details) {
 // from this argument and uses it to call the AWS STS assumeRoleWithSAML API.
 function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, SessionDuration) {
 	// Pattern for Role
-	var reRole = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
+	let reRole = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
 	// Patern for Principal (SAML Provider)
-	var rePrincipal = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
+	let rePrincipal = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
 	// Extraxt both regex patterns from SAMLAssertion attribute
 	RoleArn = samlattribute.match(reRole)[0];
 	PrincipalArn = samlattribute.match(rePrincipal)[0];
@@ -182,7 +187,7 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
   }
 
 	// Set parameters needed for assumeRoleWithSAML method
-	var params = {
+	let params = {
 		PrincipalArn: PrincipalArn,
 		RoleArn: RoleArn,
 		SAMLAssertion: SAMLAssertion
@@ -210,7 +215,7 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
     parser = new XMLParser();
     jsObj = parser.parse(response);
     // On succesful API response create file with the STS keys
-    var docContent = "[default]" + LF +
+    let docContent = "[default]" + LF +
     "aws_access_key_id = " + jsObj.AssumeRoleWithSAMLResponse.AssumeRoleWithSAMLResult.Credentials.AccessKeyId + LF +
     "aws_secret_access_key = " + jsObj.AssumeRoleWithSAMLResponse.AssumeRoleWithSAMLResult.Credentials.SecretAccessKey + LF +
     "aws_session_token = " + jsObj.AssumeRoleWithSAMLResponse.AssumeRoleWithSAMLResult.Credentials.SessionToken;
@@ -228,7 +233,7 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
       outputDocAsDownload(docContent);
     } else {
       if (DebugLogs) console.log('DEBUG: Additional Role ARNs are configured');
-      var profileList = Object.keys(RoleArns);
+      let profileList = Object.keys(RoleArns);
       console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[0]]);
       // assumeAdditionalRole(profileList, 0, data.Credentials.AccessKeyId, data.Credentials.SecretAccessKey, data.Credentials.SessionToken, docContent, SessionDuration);
     }
@@ -241,10 +246,10 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
 // The assume-role API is called using the credentials (STS keys) fetched using the SAML claim. Basically the default profile.
 function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, SessionToken, docContent, SessionDuration) {
 	// Set the fetched STS keys from the SAML response as credentials for doing the API call
-	var options = {'accessKeyId': AccessKeyId, 'secretAccessKey': SecretAccessKey, 'sessionToken': SessionToken};
-	var sts = new AWS.STS(options);
+	let options = {'accessKeyId': AccessKeyId, 'secretAccessKey': SecretAccessKey, 'sessionToken': SessionToken};
+	let sts = new AWS.STS(options);
 	// Set the parameters for the AssumeRole API call. Meaning: What role to assume
-	var params = {
+	let params = {
 		RoleArn: RoleArns[profileList[index]],
 		RoleSessionName: profileList[index]
 	};
@@ -293,7 +298,7 @@ function outputDocAsDownload(docContent) {
     console.log('DEBUG: Now going to download credentials file. Document content:');
     console.log(docContent);
   }
-  var doc = URL.createObjectURL( new Blob([docContent], {type: 'application/octet-binary'}) );
+  let doc = URL.createObjectURL( new Blob([docContent], {type: 'application/octet-binary'}) );
   if (DebugLogs) {
     console.log('DEBUG: Blob URL:' + doc);
   }
