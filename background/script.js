@@ -36,7 +36,7 @@ function addOnBeforeRequestEventListener() {
   } else {
     chrome.webRequest.onBeforeRequest.addListener(
       onBeforeRequestEvent,
-      {urls: ["https://signin.aws.amazon.com/saml"]},
+      {urls: ["https://*signin.aws.amazon.com/saml","https://*signin.amazonaws-us-gov.com/saml"]},
       ["requestBody"]
     );
     if (DebugLogs) console.log('DEBUG: onBeforeRequest Listener added');
@@ -150,9 +150,9 @@ function onBeforeRequestEvent(details) {
 // from this argument and uses it to call the AWS STS assumeRoleWithSAML API.
 function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, SessionDuration) {
 	// Pattern for Role
-	var reRole = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
+	var reRole = /arn:(aws|aws-us-gov):iam:[^:]*:[0-9]+:role\/[^,]+/i;
 	// Patern for Principal (SAML Provider)
-	var rePrincipal = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
+	var rePrincipal = /arn:(aws|aws-us-gov):iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
 	// Extraxt both regex patterns from SAMLAssertion attribute
 	RoleArn = samlattribute.match(reRole)[0];
 	PrincipalArn = samlattribute.match(rePrincipal)[0];
