@@ -40,7 +40,23 @@
 				<option value="no">no</option>
 			</select>
 		</div>
-		
+
+		<div id="divSessionDuration" class="setting-part">
+			<label>[OPTIONAL]</label><br>
+			<label>Assume all roles available from SAML provider.</label>
+			<br />
+			<select name="AssumeAllRoles" id="AssumeAllRoles">
+				<option value="yes">yes</option>
+				<option value="no">no</option>
+			</select>
+		</div>
+		<div id="divAliases" class="setting-part">
+			<label>[OPTIONAL]</label><br>
+			<label>Specify a list of account number to alias mappings. The specified account numbers will be replaced with the associated alias in the generated credentials file.</label>
+			<div id="account_aliases" class="inline-div">
+			</div>
+		</div>
+
 		<div id="divRoles" class="setting-part">
 			<label>[OPTIONAL]</label><br>
 			<label>Specify a list of Role ARN's. For each role the plugin will call the assume-role API. The fetched AWS STS keys will be added to the output file as separate profiles.</label>

@@ -1,0 +1,63 @@
+---
+extends: airbnb-base
+env:
+  browser: true
+globals:
+  chrome: readonly
+  AWS:    readonly
+rules:
+  import/extensions: 0
+  no-console: 0
+  linebreak-style: 0
+  no-multi-spaces: 0
+  indent: 0
+  no-tabs: 0  # TODO: Conform to this rule
+  no-var: 0  # TODO: Conform to this rule
+  vars-on-top: 0
+  no-use-before-define: 0  # TODO: Refactor code to fit with this rule.
+  prefer-arrow-callback: 0
+  prefer-template: 0  # TODO: Conform to this rule
+  quotes: 0  # TODO: Conform to this rule
+  max-len: 0  # TODO: Conform to max line lengths
+  operator-linebreak: 0  # TODO: conform to this rule
+  func-names: 0  # TODO: conform to this rule
+  eqeqeq: 0  # TODO: conform to this rule
+  comma-dangle: 0
+  space-before-blocks: 0
+  keyword-spacing: 0
+  object-curly-spacing: 0
+  space-before-function-paren: 0
+  no-multiple-empty-lines: 0
+  space-in-parens: 0
+  comma-spacing: 0
+  no-undef-init: 0  # TODO: Conform to this rule
+  semi: 0
+  no-plusplus: 0
+  object-shorthand: 0  # TODO: Conform to this rule
+  dot-notation: 0  # TODO: Conform to this rule
+  key-spacing: 0  # TODO: Conform to this rule
+    #  - error
+    #  - align:
+    #      beforeColon: false
+    #      afterColon:  true
+    #      on:          value
+    #      mode:        strict
+    #    multiLine:
+    #      beforeColon: false
+    #      afterColon:  true
+  prefer-destructuring: 0  # TODO: Conform to this rule
+  function-paren-newline: 0  # TODO: Conform to this rule
+  object-curly-newline: 0  # TODO: Conform to this rule
+  no-param-reassign: 0  # TODO: Conform to this rule
+  quote-props: 0  # TODO: Conform to this rule
+  brace-style: 0
+
+settings:
+  import/extensions:
+    - .mjs
+    - .js
+  import/resolver:
+    node:
+      extensions: 
+        - .mjs
+        - .js
