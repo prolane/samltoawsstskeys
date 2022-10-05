@@ -4,6 +4,7 @@ var ApplySessionDuration = true;
 var DebugLogs = false;
 var RoleArns = {};
 var LF = '\n';
+var downloadFileId;
 
 // When this background process starts, load variables from chrome storage 
 // from saved Extension Options
@@ -252,7 +253,38 @@ function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, 
 	});
 }
 
+// Triggers download of the generated file
+// Updated the downloadFileId value
+function triggerDownload(conflictAction = 'overwrite') {
+  chrome.downloads.download({ url: doc, filename: FileName, conflictAction, saveAs: false }, (id) => {
+      if(!id) return;
+  
+      downloadFileId = id;
+  });
+}
 
+// Check for errors during the download
+function handleDownloadsChanged({id, state}) {
+  if (!state || id !== downloadFileId) return;
+  let retry = false;
+
+  if (state.current === 'interrupted') {
+      // If download was interrupted, ask for retry preference
+      retry = window.confirm(`An error occurred while downloading "${FileName}". Would you like to retry?`);
+
+      if (retry) {
+          // Triggers download attempt with conflictAction set as 'prompt'
+          // This might give the user a chance to check for possible causes of the error
+          triggerDownload('prompt');
+          return;
+      }        
+  }
+
+  // If download was successfull or retry was cancelled, remove the event listener
+  if (state.current === 'complete' || !retry) {
+      chrome.downloads.onChanged.removeListener(handleDownloadsChanged);
+  }
+}
 
 // Called from either extractPrincipalPlusRoleAndAssumeRole (if RoleArns dict is empty)
 // Otherwise called from assumeAdditionalRole as soon as all roles from RoleArns have been assumed 
@@ -265,10 +297,11 @@ function outputDocAsDownload(docContent) {
   if (DebugLogs) {
     console.log('DEBUG: Blob URL:' + doc);
   }
-  // Triggers download of the generated file
-	chrome.downloads.download({ url: doc, filename: FileName, conflictAction: 'overwrite', saveAs: false });
+  // Listen to download changes
+  chrome.downloads.onChanged.addListener(handleDownloadsChanged);
+  // Triggers the first download attempt with conflictAction set as 'overwrite'
+  triggerDownload();
 }
-
 
 
 // This Listener receives messages from options.js and popup.js
