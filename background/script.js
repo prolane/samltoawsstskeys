@@ -4,6 +4,8 @@ var ApplySessionDuration = true;
 var DebugLogs = false;
 var RoleArns = {};
 var LF = '\n';
+var AWSChinaSTSEndpointDefaultRegion = 'cn-north-1';
+
 
 // When this background process starts, load variables from chrome storage 
 // from saved Extension Options
@@ -28,7 +30,7 @@ chrome.runtime.onInstalled.addListener(function(details){
 
 
 // Function to be called when this extension is activated.
-// This adds an EventListener for each request to signin.aws.amazon.com
+// This adds an EventListener for each request to signin.aws.amazon.com (Global region) and signin.amazonaws.cn/saml (China region) 
 function addOnBeforeRequestEventListener() {
   if (DebugLogs) console.log('DEBUG: Extension is activated');
   if (chrome.webRequest.onBeforeRequest.hasListener(onBeforeRequestEvent)) {
@@ -36,7 +38,7 @@ function addOnBeforeRequestEventListener() {
   } else {
     chrome.webRequest.onBeforeRequest.addListener(
       onBeforeRequestEvent,
-      {urls: ["https://signin.aws.amazon.com/saml"]},
+      {urls: ["https://signin.aws.amazon.com/saml","https://signin.amazonaws.cn/saml"]},
       ["requestBody"]
     );
     if (DebugLogs) console.log('DEBUG: onBeforeRequest Listener added');
@@ -54,7 +56,7 @@ function removeOnBeforeRequestEventListener() {
 
 
 // Callback function for the webRequest OnBeforeRequest EventListener
-// This function runs on each request to https://signin.aws.amazon.com/saml
+// This function runs on each request to https://signin.aws.amazon.com/saml (Global region) and https://signin.amazonaws.cn/saml (China region) 
 function onBeforeRequestEvent(details) {
   if (DebugLogs) console.log('DEBUG: onBeforeRequest event hit!');
   // Decode base64 SAML assertion in the request
@@ -149,14 +151,27 @@ function onBeforeRequestEvent(details) {
 // This function extracts the RoleArn and PrincipalArn (SAML-provider)
 // from this argument and uses it to call the AWS STS assumeRoleWithSAML API.
 function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, SessionDuration) {
-	// Pattern for Role
-	var reRole = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
-	// Patern for Principal (SAML Provider)
-	var rePrincipal = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
-	// Extraxt both regex patterns from SAMLAssertion attribute
-	RoleArn = samlattribute.match(reRole)[0];
-	PrincipalArn = samlattribute.match(rePrincipal)[0];
-  
+	// Pattern for Role (Global region)
+	var reRoleGlobal = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
+	// Patern for Principal (SAML Provider) (Global region)
+	var rePrincipalGlobal = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
+	// Pattern for Role (China region)
+	var reRoleCN = /arn:aws-cn:iam:[^:]*:[0-9]+:role\/[^,]+/i;
+	// Patern for Principal (SAML Provider) (China region)
+	var rePrincipalCN = /arn:aws-cn:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
+	// Flag for region
+	var GlobalRegion = true;
+	// Extraxt both regex patterns from SAMLAssertion attribute (Global region)
+	RoleArn = samlattribute.match(reRoleGlobal);
+	if (RoleArn == null) {
+		RoleArn = samlattribute.match(reRoleCN)[0];
+		PrincipalArn = samlattribute.match(rePrincipalCN)[0];
+		GlobalRegion = false;
+	} else {	
+		RoleArn = RoleArn[0];
+		PrincipalArn = samlattribute.match(rePrincipalGlobal)[0];
+	}
+	
   if (DebugLogs) {
     console.log('RoleArn: ' + RoleArn);
     console.log('PrincipalArn: ' + PrincipalArn);
@@ -173,7 +188,11 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
   }
 
 	// Call STS API from AWS
-	var sts = new AWS.STS();
+	if (GlobalRegion) {
+		var sts = new AWS.STS();
+	} else {
+		var sts = new AWS.STS({region: AWSChinaSTSEndpointDefaultRegion});
+	}
 	sts.assumeRoleWithSAML(params, function(err, data) {
 		if (err) console.log(err, err.stack); // an error occurred
 		else {
@@ -198,7 +217,7 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
         if (DebugLogs) console.log('DEBUG: Additional Role ARNs are configured');
 				var profileList = Object.keys(RoleArns);
 				console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[0]]);
-				assumeAdditionalRole(profileList, 0, data.Credentials.AccessKeyId, data.Credentials.SecretAccessKey, data.Credentials.SessionToken, docContent, SessionDuration);
+				assumeAdditionalRole(profileList, 0, data.Credentials.AccessKeyId, data.Credentials.SecretAccessKey, data.Credentials.SessionToken, docContent, SessionDuration, GlobalRegion);
 			}
 		}        
 	});
@@ -207,9 +226,13 @@ function extractPrincipalPlusRoleAndAssumeRole(samlattribute, SAMLAssertion, Ses
 
 // Will fetch additional STS keys for 1 role from the RoleArns dict
 // The assume-role API is called using the credentials (STS keys) fetched using the SAML claim. Basically the default profile.
-function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, SessionToken, docContent, SessionDuration) {
+function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, SessionToken, docContent, SessionDuration, GlobalRegion) {
 	// Set the fetched STS keys from the SAML response as credentials for doing the API call
-	var options = {'accessKeyId': AccessKeyId, 'secretAccessKey': SecretAccessKey, 'sessionToken': SessionToken};
+	if (GlobalRegion) {	
+		var options = {'accessKeyId': AccessKeyId, 'secretAccessKey': SecretAccessKey, 'sessionToken': SessionToken};
+	} else {
+		var options = {'accessKeyId': AccessKeyId, 'secretAccessKey': SecretAccessKey, 'sessionToken': SessionToken, region: AWSChinaSTSEndpointDefaultRegion};
+	}
 	var sts = new AWS.STS(options);
 	// Set the parameters for the AssumeRole API call. Meaning: What role to assume
 	var params = {
@@ -245,7 +268,7 @@ function assumeAdditionalRole(profileList, index, AccessKeyId, SecretAccessKey, 
 		// Otherwise, this is the last profile/role in the RoleArns dict. Proceed to creating the credentials file
 		if (index < profileList.length - 1) {
 			console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[index + 1]]);
-			assumeAdditionalRole(profileList, index + 1, AccessKeyId, SecretAccessKey, SessionToken, docContent);
+			assumeAdditionalRole(profileList, index + 1, AccessKeyId, SecretAccessKey, SessionToken, docContent, SessionDuration, GlobalRegion);
 		} else {
 			outputDocAsDownload(docContent);
 		}
