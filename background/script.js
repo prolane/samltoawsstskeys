@@ -103,12 +103,13 @@ function onBeforeRequestEvent(details) {
     hasRoleIndex = roleIndex != undefined;
   }
 
-  // Only set the SessionDuration if it was supplied by the SAML provider and 
+  // Set the SessionDuration if it was supplied by the SAML provider and 
   // when the user has configured to use this feature.
   if (SessionDuration !== undefined && ApplySessionDuration) {
     SessionDuration = Number(SessionDuration.firstElementChild.textContent)
   } else {
-    SessionDuration = null;
+    // Otherwise, set default 8 hours SessionDuration  
+    SessionDuration = 28800;
   }
 
   // Change newline sequence when client is on Windows
