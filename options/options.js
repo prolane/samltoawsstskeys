@@ -4,7 +4,10 @@ function save_options() {
   var FileName = document.getElementById('FileName').value;
   
   // Does SessionDuration needs to be applied?
-	var ApplySessionDuration = $("#SessionDuration option:selected").val();
+  var ApplySessionDuration = $("#SessionDuration option:selected").val();
+
+  // How log should the session be valid?
+  var SessionDuration = document.getElementById('SessionDurationSeconds').value
 	
 	// Is DEBUG log enabled?
   var DebugLogs = $("#DebugLogs option:selected").val();
@@ -26,6 +29,7 @@ function save_options() {
   chrome.storage.sync.set({
     FileName: FileName,
 		ApplySessionDuration: ApplySessionDuration,
+		SessionDuration: SessionDuration,
 		DebugLogs: DebugLogs,
 	  RoleArns: RoleArns
   }, function() {
@@ -49,11 +53,14 @@ function restore_options() {
 	// Default values
     FileName: 'credentials',
 		ApplySessionDuration: 'yes',
+		SessionDuration: '14400',
 		DebugLogs: 'no',
 	  RoleArns: {}
   }, function(items) {
 	// Set filename
     document.getElementById('FileName').value = items.FileName;
+	// Set ApplySessionDurationInSeconds
+	document.getElementById('SessionDurationSeconds').value = items.SessionDuration;
     // Set ApplySessionDuration
 		$("#SessionDuration").val(items.ApplySessionDuration);
 		// Set DebugLogs

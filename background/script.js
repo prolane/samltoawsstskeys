@@ -1,7 +1,8 @@
 // Global variables
 var FileName = 'credentials';
-var ApplySessionDuration = true;
-var DebugLogs = false;
+var FileName = 'credentials';
+var SessionDuration = 14400;
+var DebugLogs = true;
 var RoleArns = {};
 var LF = '\n';
 
@@ -108,9 +109,10 @@ function onBeforeRequestEvent(details) {
   if (SessionDuration !== undefined && ApplySessionDuration) {
     SessionDuration = Number(SessionDuration.firstElementChild.textContent)
   } else {
-    // Otherwise, set default 8 hours SessionDuration  
-    SessionDuration = 28800;
+    // Otherwise, set default 4 hours Session Duration  
+    SessionDuration = Number(14400);
   }
+  console.log('SessionDuration: ' + SessionDuration);
 
   // Change newline sequence when client is on Windows
   if (navigator.userAgent.indexOf('Windows')  !== -1) {
@@ -301,11 +303,13 @@ chrome.runtime.onMessage.addListener(
 function loadItemsFromStorage() {
   chrome.storage.sync.get({
     FileName: 'credentials',
-    ApplySessionDuration: 'yes',
-    DebugLogs: 'no',
+    ApplySessionDuration: 'no',
+    SessionDuration: '14400',
+    DebugLogs: 'yes',
     RoleArns: {}
   }, function(items) {
     FileName = items.FileName;
+    SessionDuration = items.SessionDuration;
     if (items.ApplySessionDuration == "no") {
       ApplySessionDuration = false;
     } else {
