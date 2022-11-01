@@ -1,5 +1,5 @@
 # SAML to AWS STS Keys Conversion
-Google Chrome Extension which converts a SAML 2.0 assertion to AWS STS Keys (temporary credentials). Just log in to the AWS Web Management Console using your SAML IDP and the Chrome Extension will fetch the SAML Assertion from the HTTP request. The SAML Assertion is then used to call the assumeRoleWithSAML API to create the temporary credentials. (AccessKeyId, SecretAccessKey and SessionToken).
+Google Chrome Extension, which converts a SAML 2.0 assertion to AWS STS Keys (temporary credentials). Just log in to the AWS Web Management Console using your SAML IDP, and the Chrome Extension will fetch the SAML Assertion from the HTTP request. The SAML Assertion is then used to call the assumeRoleWithSAML API to create the temporary credentials. (AccessKeyId, SecretAccessKey and SessionToken).
 
 The Chrome Extension can be downloaded here:
 [Google Chrome Web Store](https://chrome.google.com/webstore/detail/ekniobabpcnfjgfbphhcolcinmnbehde/)
@@ -13,11 +13,12 @@ The Chrome Extension can be downloaded here:
 * [Todo](#todo)
 
 ## <a name="why"></a>Why this Chrome Extension?
-If you don't have any user administration setup within AWS Identity & Access Management (IAM) but instead rely on your corporate user directory, i.e. Microsoft Active Directory. Your company uses a SAML 2.0 Identity Provider (IDP) to log in to the AWS Web Management Console (Single Sign On). Then this Chrome Estension if for you!
+If you don't have any user administration setup within AWS Identity & Access Management (IAM) but instead rely on your corporate user directory, i.e. Microsoft Active Directory. Your company uses a SAML 2.0 Identity Provider (IDP) to log in to the AWS Web Management Console (Single Sign On).  
+Then this Chrome Extension is for you!
 
-You run into trouble as soon as you would like to execute some fancy scripts from your computer which calls the AWS API's. When sending a request to the AWS API's you need credentials, meaning an AccessKey and SecretKey. You can easily generate these keys for each user in AWS IAM. However, since you don't have any users in AWS IAM and don't want to create users just for the sake of having an AccessKey and SecretKey you are screwed. But there is a way to get temporary credentials specifically for your corporate identity.
+You run into trouble as soon as you want to execute some fancy scripts from your computer, which call the AWS API. When sending a request to the AWS API, you need credentials, meaning AccessKey and SecretKey. You can quickly generate these keys for each user in AWS IAM. However, since you don't have any users in AWS IAM and don't want to create users just for the sake of having an AccessKey and SecretKey, you are screwed. But there is a way to get temporary credentials specifically for your corporate identity.
 
-The Security Token Service (STS) from AWS provides an API action assumeRoleWithSAML. Using the SAML Assertion given by your IDP the Chrome Extension will call this API action to fetch temporary credentials. (AccessKeyId, SecretAccessKey and SessionToken). This way there is no need to create some sort of anonymous user in AWS IAM used for executing scripts. This would be a real security nightmare, since it won't be possible to audit who did what. This Chrome Extension however will make it super easy for you to just use your corporate identity for executing scripts calling AWS API's.
+The Security Token Service (STS) from AWS provides an API action assumeRoleWithSAML. Using the SAML Assertion given by your IDP, the Chrome Extension will call this API action to fetch temporary credentials. (AccessKeyId, SecretAccessKey and SessionToken). This way, there is no need to create some anonymous user in AWS IAM used for executing scripts. This would be an absolute security nightmare since it is impossible to audit who did what. This Chrome Extension, however, will make it super easy for you to use your corporate identity for executing scripts calling AWS API.
 
 ## <a name="gettingstarted"></a>Getting Started from local
 1. Clone this repository
@@ -29,7 +30,7 @@ The Security Token Service (STS) from AWS provides an API action assumeRoleWithS
 
 ## <a name="faq"></a>FAQ: Frequently Asked Question
 1. How long are the credentials valid?  
-By default, the credentials are valid for 4 hours. This can be changed in the AWS IAM console or Extension settings.
+By default, the credentials are valid for 4 hours. This can be changed in the AWS IAM console or Extension settings. But it can't be more than MaxSessionDuration set for this role.
 
 ## <a name="todo"></a>TODO
 1. Migrate from [Manifest v2 to v3](https://blog.chromium.org/2020/12/manifest-v3-now-available-on-m88-beta.html)
