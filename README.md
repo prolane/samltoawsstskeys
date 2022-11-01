@@ -33,4 +33,3 @@ By default, the credentials are valid for 4 hours. This can be changed in the AW
 
 ## <a name="todo"></a>TODO
 1. Migrate from [Manifest v2 to v3](https://blog.chromium.org/2020/12/manifest-v3-now-available-on-m88-beta.html)
-2. Check why the extension is not saving the settings at Brave Browser
