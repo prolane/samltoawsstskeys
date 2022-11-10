@@ -298,12 +298,13 @@ function outputDocAsDownload(docContent) {
     console.log('DEBUG: Now going to download credentials file. Document content:');
     console.log(docContent);
   }
-  let doc = URL.createObjectURL( new Blob([docContent], {type: 'application/octet-binary'}) );
-  if (DebugLogs) {
-    console.log('DEBUG: Blob URL:' + doc);
-  }
   // Triggers download of the generated file
-	chrome.downloads.download({ url: doc, filename: FileName, conflictAction: 'overwrite', saveAs: false });
+  chrome.downloads.download({ 
+    url: 'data:text/plain,' + docContent, 
+    filename: FileName, 
+    conflictAction: 'overwrite', 
+    saveAs: false
+  });
 }
 
 
