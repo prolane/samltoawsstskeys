@@ -1,5 +1,10 @@
 # Changelog
 
+## 2022-dec-15 (v3.0)
+* Code refactoring due to upgrading to Extension Manifest V3
+* Improved popup styling
+* LCM on dependency libs
+
 ## 2022-jun-29 (v2.8)
 * At request of Google, the "tabs" permission is removed.
 
