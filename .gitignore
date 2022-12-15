@@ -1,0 +1,3 @@
+.DS_Store
+lib/aws-sdk/build/node_modules/
+lib/aws-sdk/lib/aws-js-sdk-bundle.js.LICENSE.txt

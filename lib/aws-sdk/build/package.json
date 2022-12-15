@@ -1,0 +1,17 @@
+{
+  "name": "aws-sdk-webpack",
+  "version": "1.0.0",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sts": "3.209.0"
+  },
+  "devDependencies": {
+    "path-browserify": "^1.0.1",
+    "webpack": "^5.0.0",
+    "webpack-cli": "^4.10.0"
+  }
+}
