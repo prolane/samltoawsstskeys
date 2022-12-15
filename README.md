@@ -10,6 +10,7 @@ The Chrome Extension can be downloaded here:
 * [Why this Chrome Extension?](#why)
 * [Getting Started](#gettingstarted)
 * [Create a symlink to your .aws directory (for Windows users)](#symlink)
+* [Plugin Development Notes](#development)
 * [Frequently Asked Question](#faq)
 
 ## <a name="why"></a>Why this Chrome Extension?
@@ -24,6 +25,23 @@ TODO
 
 ## <a name="symlink"></a>Create a symlink to your .aws directory (for Windows users)
 TODO
+
+## <a name="development"></a>Plugin Development Notes
+Here are some important notes for development of this plugin.
+
+### AWS SDK with webpack
+The AWS SDK for Javascript is packaged with webpack. npm and webpack configuration is located in `lib/aws-sdk/build`.
+
+To install a specific version of an AWS SDK module, go into the build directory and run:
+```
+npm install --save --save-exact @aws-sdk/client-sts@3.209.0
+```
+
+To simply install the required node modules and build the sdk library required for the plugin:
+```
+npm install
+npm run build
+```
 
 ## <a name="faq"></a>FAQ: Frequently Asked Question
 1. Why can I not save file somewhere else?
