@@ -94,7 +94,8 @@ async function onBeforeRequestEvent(details) {
   options = {
     ignoreAttributes: false,
     attributeNamePrefix : "__",
-    removeNSPrefix: true
+    removeNSPrefix: true,
+    alwaysCreateTextNode: true
   };
   parser = new XMLParser(options);
   jsObj = parser.parse(samlXmlDoc);
@@ -112,7 +113,7 @@ async function onBeforeRequestEvent(details) {
       }
     }
     if (attributes[i].__Name == "https://aws.amazon.com/SAML/Attributes/SessionDuration") {
-      sessionduration = attributes[i].AttributeValue
+      sessionduration = attributes[i].AttributeValue['#text']
       if (DebugLogs) {
         console.log('DEBUG: sessionduration:');
         console.log(sessionduration);
@@ -163,17 +164,18 @@ async function onBeforeRequestEvent(details) {
   if (attributes_role_list.length > 1 && hasRoleIndex) {
     if (DebugLogs) console.log('DEBUG: More than one role claimed and role chosen.');
     for (i = 0; i < attributes_role_list.length; i++) { 
-      attributes_role_list_item = attributes_role_list[i];
-      if (attributes_role_list_item.indexOf(roleIndex) > -1) {
+      // roleIndex is an AWS IAM Role ARN. 
+      // We need to check which item in attributes_role_list matches with roleIndex as substring
+      if (attributes_role_list[i]['#text'].indexOf(roleIndex) > -1) {
         // This item holdes the data for the role to assume.
         // (i.e. the ARN for the IAM role and the ARN of the saml-provider resource)
-        attributes_role = attributes_role_list_item
+        attributes_role = attributes_role_list[i]['#text']
       }
     }
   }
   // If there is just 1 role in the claim there will be no 'roleIndex' in the form data.
   // If there is just one role, the XMLParser does not create a list
-  else if (attributes_role_list.length == undefined) {
+  else if (attributes_role_list.hasOwnProperty('#text')) {
     // This item holdes the data for the role to assume.
     // (i.e. the ARN for the IAM role and the ARN of the saml-provider resource)
     // Use "['#text']" selector, because with one role its not a list and we simply need the value

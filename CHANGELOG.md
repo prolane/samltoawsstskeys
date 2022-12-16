@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022-dec-16 (v3.1)
+* Fix [#58](https://github.com/prolane/samltoawsstskeys/issues/58). Parse various SAML Assertion AttributeValue syntax in a consistent way.
+
 ## 2022-dec-15 (v3.0)
 * Code refactoring due to upgrading to Extension Manifest V3
 * Improved popup styling
