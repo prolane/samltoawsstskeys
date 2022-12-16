@@ -44,6 +44,16 @@ npm run build
 ```
 
 ## <a name="faq"></a>FAQ: Frequently Asked Question
-1. Why can I not save file somewhere else?
-TODO
-2. How long are the credentials valid?
+1. How to check for errors in the extension?
+    * Go to the options page of the extension
+    * Set 'Enable DEBUG logs' to 'yes' and hit the 'Save' button below
+    * Go to the Chrome Extensions page and look for the 'SAML to AWS STS Keys Conversion' extension
+    * Click on the link where it says 'Inspect views'
+    * A new Chrome DevTools window should pop up, with the 'Console' tab already selected. This is where you'll be able to view all logs.
+    * Perform a new login and check the logs to see if there are any errors.
+
+2. Why can I not save the credentials file somewhere else?
+With security in mind Google has limited the Chrome browser to only read and write to the Chrome Downloads directory. This way none of your Chrome extension will be able to steal data from your computer.
+
+3. How long are the credentials valid?
+AWS calls this 'session duration'. The default session duration is 1 hour. The maximum session duration is configured in AWS IAM as an attribute of the IAM Role. Your IDP might be configured to pass along an additional SAML claim which requests to apply a custom session duration. This value can be configured to be higher than the default of 1 hour. However, this can never be higher than the configured maximum session duration on the IAM Role as this will result in an error.
