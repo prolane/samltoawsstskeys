@@ -179,6 +179,9 @@ async function onBeforeRequestEvent(details) {
     // Use "['#text']" selector, because with one role its not a list and we simply need the value
     attributes_role = attributes_role_list['#text']
   }
+  else if (typeof attributes_role_list === 'string') {
+    attributes_role = attributes_role_list
+  }
   else {
     if (DebugLogs) console.log('DEBUG: Not known which role to assume.');
     return; // No need to proceed any further
