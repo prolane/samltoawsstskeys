@@ -274,7 +274,14 @@ async function assumeRoleWithSAML(roleClaimValue, SAMLAssertion, SessionDuration
       SAMLAssertion: SAMLAssertion
     }))
     if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
+      console.log('ERROR: Failed requesting AssumeRoleWithSAML')
+      let errorresponse;
+      try {
+        errorresponse = await response.text();
+      } catch (error) {
+        errorresponse = "No error response provided";
+      }
+      throw new Error(`HTTP error: ${response.status}. Response: ${errorresponse}`);
     }
     const xmldata = await response.text();
     if (DebugLogs) {
