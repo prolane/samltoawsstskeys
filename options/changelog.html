@@ -20,6 +20,14 @@
 	<hr>
 	
 	<div id="divChangelog">
+    <h3>2022-dec-19<br>v3.2</h3>
+		<ul>
+			<li>Fix <a href="https://github.com/prolane/samltoawsstskeys/issues/61" target="_blank">#61</a>. Instead of using the aws http api directly for AssumeRoleWithSAML, this version switches to using the aws sdk. This is to fix processing large SAML Assertions.</li>
+      <li>Fix <a href="https://github.com/prolane/samltoawsstskeys/issues/62" target="_blank">#62</a>. When the IDP does not add a Session Duration as SAML Assertion Attribute, ignore and continue.</li>
+		</ul>
+		<br />
+		<br />
+    
     <h3>2022-dec-16<br>v3.1</h3>
 		<ul>
 			<li>Fix <a href="https://github.com/prolane/samltoawsstskeys/issues/58" target="_blank">#58</a>. Parse various SAML Assertion AttributeValue syntax in a consistent way.</li>
