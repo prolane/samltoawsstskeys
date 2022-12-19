@@ -140,7 +140,7 @@ async function onBeforeRequestEvent(details) {
 
   // Only set the SessionDuration if it was supplied by the SAML provider and 
   // when the user has configured to use this feature.
-  if (sessionduration == undefined || !ApplySessionDuration) {
+  if (typeof sessionduration === 'undefined' || !ApplySessionDuration) {
     sessionduration = null
   }
 
