@@ -264,40 +264,32 @@ async function assumeRoleWithSAML(roleClaimValue, SAMLAssertion, SessionDuration
     params['DurationSeconds'] = SessionDuration;
   }
 
+  // AWS SDK is a module exorted from a webpack packaged lib
+  // See 'library.name' in webpack.config.js
+  let clientconfig = {
+    region: 'us-east-1', // region is mandatory to specify, but ignored when using global endpoint
+    useGlobalEndpoint: true
+  }
+  const client = new webpacksts.AWSSTSClient(clientconfig);
+  const command = new webpacksts.AWSAssumeRoleWithSAMLCommand(params);
+
+  console.log("INFO: AWSAssumeRoleWithSAMLCommand client.send will now be executed")
   try {
-    // Call AWS STS API
-    const response = await fetch('https://sts.amazonaws.com/?' + new URLSearchParams({
-      Version: '2011-06-15',
-      Action: 'AssumeRoleWithSAML',
-      RoleArn: RoleArn,
-      PrincipalArn: PrincipalArn,
-      SAMLAssertion: SAMLAssertion
-    }))
-    if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
-    }
-    const xmldata = await response.text();
-    if (DebugLogs) {
-      console.log('DEBUG: Text response from AssumeRoleWithSAML');
-      console.log(xmldata);
-    }
-    // Response is XML. Convert XML to JS object
-    parser = new XMLParser();
-    jsObj = parser.parse(xmldata);
+    const response = await client.send(command);
+    console.log("INFO: AWSAssumeRoleWithSAMLCommand client.send is done!")
     let keys = {
-      access_key_id: jsObj.AssumeRoleWithSAMLResponse.AssumeRoleWithSAMLResult.Credentials.AccessKeyId,
-      secret_access_key: jsObj.AssumeRoleWithSAMLResponse.AssumeRoleWithSAMLResult.Credentials.SecretAccessKey,
-      session_token: jsObj.AssumeRoleWithSAMLResponse.AssumeRoleWithSAMLResult.Credentials.SessionToken,
+      access_key_id: response.Credentials.AccessKeyId,
+      secret_access_key: response.Credentials.SecretAccessKey,
+      session_token: response.Credentials.SessionToken,
     }
     if (DebugLogs) {
-      console.log('DEBUG: Successfully assumed default profile');
-      console.log('Received credentials:');
+      console.log('DEBUG: AssumeRoleWithSAML response:');
       console.log(keys);
     }
     return keys;
   }
   catch (error) {
-    console.error(`Could not call AssumeRoleWithSAML: ${error}`);
+    console.log(error)
   }
 } // End of assumeRoleWithSAML function
 
