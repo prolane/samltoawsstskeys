@@ -1,136 +1,136 @@
 <!doctype html>
 <html>
   <head>
-	<script src="../lib/jquery-3.1.1.min.js"></script>
-	<link rel="stylesheet" type="text/css" href="options.css">
+  <script src="../lib/jquery-3.1.1.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="options.css">
     <title>Changelog for 'SAML to AWS STS Keys Converter'</title>
   </head>
   <body>
-	<div id="divTitle">
-		<div id="divIcon" class="inline-div"><img src="../icons/icon_128.png" alt="Icon" height="50" width="50"></div>
-		<div id="divHeader" class="inline-div"><h2>Changelog for 'SAML to AWS STS Keys Converter'</h2></div>
-	</div>
-	<hr>
-	
-	<div id="divInfo">
-		<p>Developed by prolane.org (Gerard Laan)</p>
-		<p>For help, please see README at the <a href="https://github.com/prolane/samltoawsstskeys/blob/master/README.md" target="_blank">project page on Github.com</a></p>
-		<p>Click <a href="options.html" target="_blank">here</a> to open the options panel for this plugin.</p>
-	</div>
-	<hr>
-	
-	<div id="divChangelog">
+  <div id="divTitle">
+    <div id="divIcon" class="inline-div"><img src="../icons/icon_128.png" alt="Icon" height="50" width="50"></div>
+    <div id="divHeader" class="inline-div"><h2>Changelog for 'SAML to AWS STS Keys Converter'</h2></div>
+  </div>
+  <hr>
+
+  <div id="divInfo">
+    <p>Developed by prolane.org (Gerard Laan)</p>
+    <p>For help, please see README at the <a href="https://github.com/prolane/samltoawsstskeys/blob/master/README.md" target="_blank">project page on Github.com</a></p>
+    <p>Click <a href="options.html" target="_blank">here</a> to open the options panel for this plugin.</p>
+  </div>
+  <hr>
+
+  <div id="divChangelog">
     <h3>2022-dec-19<br>v3.2</h3>
-		<ul>
-			<li>Fix <a href="https://github.com/prolane/samltoawsstskeys/issues/61" target="_blank">#61</a>. Instead of using the aws http api directly for AssumeRoleWithSAML, this version switches to using the aws sdk. This is to fix processing large SAML Assertions.</li>
+    <ul>
+      <li>Fix <a href="https://github.com/prolane/samltoawsstskeys/issues/61" target="_blank">#61</a>. Instead of using the aws http api directly for AssumeRoleWithSAML, this version switches to using the aws sdk. This is to fix processing large SAML Assertions.</li>
       <li>Fix <a href="https://github.com/prolane/samltoawsstskeys/issues/62" target="_blank">#62</a>. When the IDP does not add a Session Duration as SAML Assertion Attribute, ignore and continue.</li>
-		</ul>
-		<br />
-		<br />
+    </ul>
+    <br />
+    <br />
     
     <h3>2022-dec-16<br>v3.1</h3>
-		<ul>
-			<li>Fix <a href="https://github.com/prolane/samltoawsstskeys/issues/58" target="_blank">#58</a>. Parse various SAML Assertion AttributeValue syntax in a consistent way.</li>
-		</ul>
-		<br />
-		<br />
+    <ul>
+      <li>Fix <a href="https://github.com/prolane/samltoawsstskeys/issues/58" target="_blank">#58</a>. Parse various SAML Assertion AttributeValue syntax in a consistent way.</li>
+    </ul>
+    <br />
+    <br />
 
     <h3>2022-dec-15<br>v3.0</h3>
-		<ul>
-			<li>Code refactoring due to upgrading to Extension Manifest V3.</li>
+    <ul>
+      <li>Code refactoring due to upgrading to Extension Manifest V3.</li>
       <li>Improved popup styling.</li>
       <li>LCM on dependency libs.</li>
-		</ul>
-		<br />
-		<br />
+    </ul>
+    <br />
+    <br />
 
-		<h3>2022-jun-29<br>v2.8</h3>
-		<ul>
-			<li>At request of Google, the "tabs" permission is removed.</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2022-jun-29<br>v2.8</h3>
+    <ul>
+      <li>At request of Google, the "tabs" permission is removed.</li>
+    </ul>
+    <br />
+    <br />
     
     <h3>2019-feb-8<br>v2.7</h3>
-		<ul>
-			<li>Changed permissions. The extension will now ask access to any requested URL. This is needed because of changed policy in Chrome 72 for the chrome.webRequest API. Read <a href="https://github.com/prolane/samltoawsstskeys/issues/28#issuecomment-461938267" target="_blank">here</a> for the rationale behind it. Fixes <a href="https://github.com/prolane/samltoawsstskeys/issues/28" target="_blank">#28</a>.</li>
-		</ul>
-		<br />
-		<br />
+    <ul>
+      <li>Changed permissions. The extension will now ask access to any requested URL. This is needed because of changed policy in Chrome 72 for the chrome.webRequest API. Read <a href="https://github.com/prolane/samltoawsstskeys/issues/28#issuecomment-461938267" target="_blank">here</a> for the rationale behind it. Fixes <a href="https://github.com/prolane/samltoawsstskeys/issues/28" target="_blank">#28</a>.</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2019-feb-7<br>v2.6</h3>
-		<ul>
-			<li>Adds the option to enable debug logs</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2019-feb-7<br>v2.6</h3>
+    <ul>
+      <li>Adds the option to enable debug logs</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2018-nov-15<br>v2.5</h3>
-		<ul>
-			<li>Implements CRLF as newlines in the credentials file when the client is on Windows. Fixes <a href="https://github.com/prolane/samltoawsstskeys/issues/21" target="_blank">#21</a></li>
-			<li>Removes unnecessary spaces prior the newlines in credentials file. Fixes <a href="https://github.com/prolane/samltoawsstskeys/issues/14" target="_blank">#14</a></li>
-		</ul>
-		<br />
-		<br />
+    <h3>2018-nov-15<br>v2.5</h3>
+    <ul>
+      <li>Implements CRLF as newlines in the credentials file when the client is on Windows. Fixes <a href="https://github.com/prolane/samltoawsstskeys/issues/21" target="_blank">#21</a></li>
+      <li>Removes unnecessary spaces prior the newlines in credentials file. Fixes <a href="https://github.com/prolane/samltoawsstskeys/issues/14" target="_blank">#14</a></li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2018-aug-2<br>v2.4</h3>
-		<ul>
-			<li>Bug fix for users with one IAM role in the SAML claim. Bug was introduced with release 2.1, but according to user reports only results in an error starting with Chrome release 68.</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2018-aug-2<br>v2.4</h3>
+    <ul>
+      <li>Bug fix for users with one IAM role in the SAML claim. Bug was introduced with release 2.1, but according to user reports only results in an error starting with Chrome release 68.</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2018-may-14<br>v2.3</h3>
-		<ul>
-			<li>Release 2.2 revealed many users have their SAML provider requesting a SessionDuration which is higher than the maximum session duration configured at the IAM Role. Release 2.3 now supports manually enabling or disabling this SessionDuration feature. The feature is enabled by default, but can be disabled in the options.</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2018-may-14<br>v2.3</h3>
+    <ul>
+      <li>Release 2.2 revealed many users have their SAML provider requesting a SessionDuration which is higher than the maximum session duration configured at the IAM Role. Release 2.3 now supports manually enabling or disabling this SessionDuration feature. The feature is enabled by default, but can be disabled in the options.</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2018-may-12<br>v2.2</h3>
-		<ul>
-			<li>Now supports the SessionDuration SAML attribute which can be set by your IDP administrator. This can keep your credentials valid longer than the default 1 hour. Thanks to <a href="https://github.com/ashemedai" target="_blank">Jeroen</a> for his contribution!</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2018-may-12<br>v2.2</h3>
+    <ul>
+      <li>Now supports the SessionDuration SAML attribute which can be set by your IDP administrator. This can keep your credentials valid longer than the default 1 hour. Thanks to <a href="https://github.com/ashemedai" target="_blank">Jeroen</a> for his contribution!</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2017-nov-01<br>v2.1</h3>
-		<ul>
-			<li>Bug fix: Chrome 62 broke the extension. Special thanks for <a href="https://github.com/bdruth" target="_blank">Brice</a> for contributing. Thanks to <a href="https://gitlab.com/gbvanrenswoude" target="_blank">Gijs</a> for helping out with testing.</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2017-nov-01<br>v2.1</h3>
+    <ul>
+      <li>Bug fix: Chrome 62 broke the extension. Special thanks for <a href="https://github.com/bdruth" target="_blank">Brice</a> for contributing. Thanks to <a href="https://gitlab.com/gbvanrenswoude" target="_blank">Gijs</a> for helping out with testing.</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2016-nov-21<br>v2.0</h3>
-		<ul>
-			<li>Added functionality to specify Role ARN's in the options panel. This is meant for cross-account assume-role API calls. For each specified role temporary credentials will be fetched and added to the credentials file.</li>
-			<li>Updated 'AWS SDK for Javascript' library to latest version</li>
-			<li>Plugin now shows changelog to the user after the installation of new version</li>
-			<li>Options panel has a new look to improve readability</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2016-nov-21<br>v2.0</h3>
+    <ul>
+      <li>Added functionality to specify Role ARN's in the options panel. This is meant for cross-account assume-role API calls. For each specified role temporary credentials will be fetched and added to the credentials file.</li>
+      <li>Updated 'AWS SDK for Javascript' library to latest version</li>
+      <li>Plugin now shows changelog to the user after the installation of new version</li>
+      <li>Options panel has a new look to improve readability</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2016-jul-24<br>v1.2</h3>
-		<ul>
-			<li>Bug fix: when just 1 role in the SAML Assertion available now also works well</li>
-			<li>Now uses a regex to extract Role and Principal from SAML Assertion. This way it does not matter in what order the IDP adds the Role and Principle to the SAML Assertion.</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2016-jul-24<br>v1.2</h3>
+    <ul>
+      <li>Bug fix: when just 1 role in the SAML Assertion available now also works well</li>
+      <li>Now uses a regex to extract Role and Principal from SAML Assertion. This way it does not matter in what order the IDP adds the Role and Principle to the SAML Assertion.</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2016-apr-11<br>v1.1</h3>
-		<ul>
-			<li>Improved usability. No longer needed to manually specify PrincipalArn and RoleArn in options panel. Removed these options from the options panel. PrincipalArn and RoleArn is now parsed from the SAML Assertion itself.</li>
-		</ul>
-		<br />
-		<br />
+    <h3>2016-apr-11<br>v1.1</h3>
+    <ul>
+      <li>Improved usability. No longer needed to manually specify PrincipalArn and RoleArn in options panel. Removed these options from the options panel. PrincipalArn and RoleArn is now parsed from the SAML Assertion itself.</li>
+    </ul>
+    <br />
+    <br />
 
-		<h3>2016-apr-04<br>v1.0</h3>
-		<ul>
-			<li>Initial release</li>
-		</ul>		
-		
-	</div>
+    <h3>2016-apr-04<br>v1.0</h3>
+    <ul>
+      <li>Initial release</li>
+    </ul>    
+    
+  </div>
   </body>
 </html>

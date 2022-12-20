@@ -24,9 +24,9 @@ chrome.storage.sync.get({
 // If so, show the user the changelog
 // var thisVersion = chrome.runtime.getManifest().version;
 chrome.runtime.onInstalled.addListener(function(details){
-	if(details.reason == "install" || details.reason == "update"){
-		// Open a new tab to show changelog html page
-		chrome.tabs.create({url: "../options/changelog.html"});
+  if(details.reason == "install" || details.reason == "update"){
+    // Open a new tab to show changelog html page
+    chrome.tabs.create({url: "../options/changelog.html"});
     }
 });
 
@@ -299,7 +299,7 @@ async function assumeRoleWithSAML(roleClaimValue, SAMLAssertion, SessionDuration
 // (which where fetched using SAML) as authentication.
 async function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey,
   SessionToken, SessionDuration) {
-	// Set the fetched STS keys from the SAML response as credentials for doing the API call
+  // Set the fetched STS keys from the SAML response as credentials for doing the API call
   let clientconfig = {
     region: 'us-east-1', // region is mandatory to specify, but ignored when using global endpoint
     useGlobalEndpoint: true,
@@ -310,11 +310,11 @@ async function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey
   // AWS SDK is a module exorted from a webpack packaged lib
   // See 'library.name' in webpack.config.js
   const client = new webpacksts.AWSSTSClient(clientconfig);
-	// Set the parameters for the AssumeRole API call. Meaning: What role to assume
-	let params = {
-		RoleArn: roleArn,
-		RoleSessionName: roleSessionName
-	};
+  // Set the parameters for the AssumeRole API call. Meaning: What role to assume
+  let params = {
+    RoleArn: roleArn,
+    RoleSessionName: roleSessionName
+  };
   if (SessionDuration !== null) {
     params['DurationSeconds'] = SessionDuration;
   }
