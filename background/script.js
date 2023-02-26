@@ -10,24 +10,24 @@ let DebugLogs = false;
 let RoleArns = {};
 let LF = '\n';
 
-// When this background process starts, load variables from chrome storage 
+// When this background process starts, load variables from chrome storage
 // from saved Extension Options
 loadItemsFromStorage();
 // Additionaly on start of the background process it is checked if this extension can be activated
 chrome.storage.sync.get({
-    // The default is activated
-    Activated: true
-  }, function(item) {
-    if (item.Activated) addOnBeforeRequestEventListener();
+  // The default is activated
+  Activated: true
+}, function (item) {
+  if (item.Activated) addOnBeforeRequestEventListener();
 });
 // Additionally on start of the background process it is checked if a new version of the plugin is installed.
 // If so, show the user the changelog
 // var thisVersion = chrome.runtime.getManifest().version;
-chrome.runtime.onInstalled.addListener(function(details){
-  if(details.reason == "install" || details.reason == "update"){
+chrome.runtime.onInstalled.addListener(function (details) {
+  if (details.reason == "install" || details.reason == "update") {
     // Open a new tab to show changelog html page
-    chrome.tabs.create({url: "../options/changelog.html"});
-    }
+    chrome.tabs.create({ url: "../options/changelog.html" });
+  }
 });
 
 
@@ -41,7 +41,7 @@ function addOnBeforeRequestEventListener() {
   } else {
     chrome.webRequest.onBeforeRequest.addListener(
       onBeforeRequestEvent,
-      {urls: ["https://signin.aws.amazon.com/saml"]},
+      { urls: ["https://signin.aws.amazon.com/saml"] },
       ["requestBody"]
     );
     if (DebugLogs) console.log('DEBUG: onBeforeRequest Listener added');
@@ -73,10 +73,10 @@ async function onBeforeRequestEvent(details) {
     samlXmlDoc = decodeURIComponent(unescape(atob(details.requestBody.formData.SAMLResponse[0])));
   } else if (details.requestBody.raw) {
     let combined = new ArrayBuffer(0);
-    details.requestBody.raw.forEach(function(element) { 
-      let tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength); 
-      tmp.set( new Uint8Array(combined), 0 ); 
-      tmp.set( new Uint8Array(element.bytes),combined.byteLength ); 
+    details.requestBody.raw.forEach(function (element) {
+      let tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength);
+      tmp.set(new Uint8Array(combined), 0);
+      tmp.set(new Uint8Array(element.bytes), combined.byteLength);
       combined = tmp.buffer;
     });
     let combinedView = new DataView(combined);
@@ -93,7 +93,7 @@ async function onBeforeRequestEvent(details) {
   // Convert XML to JS object
   options = {
     ignoreAttributes: false,
-    attributeNamePrefix : "__",
+    attributeNamePrefix: "__",
     removeNSPrefix: true,
     alwaysCreateTextNode: true
   };
@@ -138,14 +138,14 @@ async function onBeforeRequestEvent(details) {
     hasRoleIndex = roleIndex != undefined;
   }
 
-  // Only set the SessionDuration if it was supplied by the SAML provider and 
+  // Only set the SessionDuration if it was supplied by the SAML provider and
   // when the user has configured to use this feature.
   if (typeof sessionduration === 'undefined' || !ApplySessionDuration) {
     sessionduration = null
   }
 
   // Change newline sequence when client is on Windows
-  if (navigator.userAgent.indexOf('Windows')  !== -1) {
+  if (navigator.userAgent.indexOf('Windows') !== -1) {
     LF = '\r\n'
   }
 
@@ -156,15 +156,15 @@ async function onBeforeRequestEvent(details) {
     console.log('roleIndex: ' + roleIndex);
     console.log('SAMLAssertion: ' + SAMLAssertion);
   }
-  
+
   let attributes_role;
-  // If there is more than 1 role in the claim and roleIndex is set (hasRoleIndex = 'true'), then 
+  // If there is more than 1 role in the claim and roleIndex is set (hasRoleIndex = 'true'), then
   // roleIndex should match with one of the items in attributes_role_list (the claimed roles).
   // This is the role which will be assumed.
   if (attributes_role_list.length > 1 && hasRoleIndex) {
     if (DebugLogs) console.log('DEBUG: More than one role claimed and role chosen.');
-    for (i = 0; i < attributes_role_list.length; i++) { 
-      // roleIndex is an AWS IAM Role ARN. 
+    for (i = 0; i < attributes_role_list.length; i++) {
+      // roleIndex is an AWS IAM Role ARN.
       // We need to check which item in attributes_role_list matches with roleIndex as substring
       if (attributes_role_list[i]['#text'].indexOf(roleIndex) > -1) {
         // This item holdes the data for the role to assume.
@@ -190,16 +190,16 @@ async function onBeforeRequestEvent(details) {
     console.log(attributes_role);
   }
 
-  let keys; // To store the AWS access and access secret key 
+  let keys; // To store the AWS access and access secret key
   let credentials = ""; // Store all the content that needs to be written to the credentials file
   // Call AWS STS API to get credentials using the SAML Assertion
   try {
     keys = await assumeRoleWithSAML(attributes_role, SAMLAssertion, sessionduration);
     // Append AWS credentials keys as string to 'credentials' variable
-    credentials = addProfileToCredentials(credentials, "default", keys.access_key_id, 
+    credentials = addProfileToCredentials(credentials, "default", keys.access_key_id,
       keys.secret_access_key, keys.session_token)
   }
-  catch(err) {
+  catch (err) {
     console.log("ERROR: Error when trying to assume the IAM Role with the SAML Assertion.");
     console.log(err, err.stack);
     return;
@@ -211,22 +211,27 @@ async function onBeforeRequestEvent(details) {
     // Loop through each profile (each profile has a role ARN as value)
     let profileList = Object.keys(RoleArns);
     for (let i = 0; i < profileList.length; i++) {
-      console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[i]] + 
-      " with profile name '" + profileList[i] + "'.");
+      console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[i]] +
+        " with profile name '" + profileList[i] + "'.");
       // Call AWS STS API to get credentials using Access Key ID and Secret Access Key as authentication
       try {
-        let result = await assumeRole(RoleArns[profileList[i]], profileList[i], keys.access_key_id,
-          keys.secret_access_key, keys.session_token, sessionduration);
-        // Append AWS credentials keys as string to 'credentials' variable
-        credentials = addProfileToCredentials(credentials, profileList[i], result.access_key_id,
-          result.secret_access_key, result.session_token);
+        let parsedAccountId = RoleArns[profileList[i]].split(':')[4];
+        let callerIdentityAccountId = await getCallerIdentity(keys.access_key_id, keys.secret_access_key, keys.session_token);
+
+        if (callerIdentityAccountId === parsedAccountId) {
+          console.log(`INFO: Caller Identity Account ID: ${callerIdentityAccountId} matches Role Account ID: ${parsedAccountId}`);
+          let result = await keys;
+          // Append AWS credentials keys as string to 'credentials' variable
+          credentials = addProfileToCredentials(credentials, profileList[i], result.access_key_id,
+            result.secret_access_key, result.session_token);
+        }
       }
-      catch(err) {
+      catch (err) {
         console.log("ERROR: Error when trying to assume additional IAM Role.");
         console.log(err, err.stack);
       }
     }
-  } 
+  }
 
   // Write credentials to file
   console.log('Generate AWS tokens file.');
@@ -248,7 +253,7 @@ async function assumeRoleWithSAML(roleClaimValue, SAMLAssertion, SessionDuration
   // Extract both regex patterns from the roleClaimValue (which is a SAMLAssertion attribute)
   RoleArn = roleClaimValue.match(reRole)[0];
   PrincipalArn = roleClaimValue.match(rePrincipal)[0];
-  
+
   if (DebugLogs) {
     console.log('RoleArn: ' + RoleArn);
     console.log('PrincipalArn: ' + PrincipalArn);
@@ -294,68 +299,47 @@ async function assumeRoleWithSAML(roleClaimValue, SAMLAssertion, SessionDuration
 } // End of assumeRoleWithSAML function
 
 
-// Will fetch additional AWS credentials keys for 1 role
-// The assume-role API is called using the earlier fetched AWS credentials keys
-// (which where fetched using SAML) as authentication.
-async function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey,
-  SessionToken, SessionDuration) {
-  // Set the fetched STS keys from the SAML response as credentials for doing the API call
+async function getCallerIdentity(accessKeyId, secretAccessKey, sessionToken) {
   let clientconfig = {
     region: 'us-east-1', // region is mandatory to specify, but ignored when using global endpoint
     useGlobalEndpoint: true,
     credentials: {
-      accessKeyId: AccessKeyId, secretAccessKey: SecretAccessKey, sessionToken: SessionToken
+      accessKeyId: accessKeyId, secretAccessKey: secretAccessKey, sessionToken: sessionToken
     }
   }
   // AWS SDK is a module exorted from a webpack packaged lib
   // See 'library.name' in webpack.config.js
   const client = new webpacksts.AWSSTSClient(clientconfig);
-  // Set the parameters for the AssumeRole API call. Meaning: What role to assume
-  let params = {
-    RoleArn: roleArn,
-    RoleSessionName: roleSessionName
-  };
-  if (SessionDuration !== null) {
-    params['DurationSeconds'] = SessionDuration;
-  }
-  const command = new webpacksts.AWSAssumeRoleCommand(params);
 
-  console.log("INFO: assumeRole client.send will now be executed")
+  // Empty input as its not needed in this case
+  let input = {};
+  const command = new webpacksts.AWSGetCallerIdentityCommand(input);
+
   try {
     const response = await client.send(command);
-    console.log("INFO: assumeRole client.send is done!")
-    let keys = {
-      access_key_id: response.Credentials.AccessKeyId,
-      secret_access_key: response.Credentials.SecretAccessKey,
-      session_token: response.Credentials.SessionToken,
-    }
-    if (DebugLogs) {
-      console.log('DEBUG: assumeRole response:');
-      console.log(keys);
-    }
-    return keys
-  }
-  catch (error) {
-    console.log(error)
+    console.log("INFO: response.Account has been received!")
+    let account = response.Account;
+    return account
+  } catch (err) {
+    console.error(err);
   }
 }
-
 
 
 // Append AWS credentials profile to the existing content of a credentials file
 function addProfileToCredentials(credentials, profileName, AccessKeyId, SecretAcessKey, SessionToken) {
   credentials += "[" + profileName + "]" + LF +
-  "aws_access_key_id=" + AccessKeyId + LF +
-  "aws_secret_access_key=" + SecretAcessKey + LF +
-  "aws_session_token=" + SessionToken + LF +
-  LF;
+    "aws_access_key_id=" + AccessKeyId + LF +
+    "aws_secret_access_key=" + SecretAcessKey + LF +
+    "aws_session_token=" + SessionToken + LF +
+    LF;
   return credentials;
 }
 
 
 
 // Takes the content of an AWS SDK 'credentials' file as argument and will
-// initiate a download in Chrome. 
+// initiate a download in Chrome.
 // It should be saved to Chrome's Download directory automatically.
 function outputDocAsDownload(docContent) {
   if (DebugLogs) {
@@ -363,10 +347,10 @@ function outputDocAsDownload(docContent) {
     console.log(docContent);
   }
   // Triggers download of the generated file
-  chrome.downloads.download({ 
-    url: 'data:text/plain,' + docContent, 
-    filename: FileName, 
-    conflictAction: 'overwrite', 
+  chrome.downloads.download({
+    url: 'data:text/plain,' + docContent,
+    filename: FileName,
+    conflictAction: 'overwrite',
     saveAs: false
   });
 }
@@ -376,27 +360,36 @@ function outputDocAsDownload(docContent) {
 // This Listener receives messages from options.js and popup.js
 // Received messages are meant to affect the background process.
 chrome.runtime.onMessage.addListener(
-  function(request, sender, sendResponse) {
+  function (request, sender, sendResponse) {
     // When the options are changed in the Options panel
     // these items need to be reloaded in this background process.
     if (request.action == "reloadStorageItems") {
       loadItemsFromStorage();
-      sendResponse({message: "Storage items reloaded in background process."});
+      sendResponse({ message: "Storage items reloaded in background process." });
     }
     // When the activation checkbox on the popup screen is checked/unchecked
     // the webRequest event listener needs to be added or removed.
     if (request.action == "addWebRequestEventListener") {
       if (DebugLogs) console.log('DEBUG: Extension enabled from popup');
       addOnBeforeRequestEventListener();
-      sendResponse({message: "webRequest EventListener added in background process."});
+      sendResponse({ message: "webRequest EventListener added in background process." });
     }
     if (request.action == "removeWebRequestEventListener") {
       if (DebugLogs) console.log('DEBUG: Extension disabled from popup');
       removeOnBeforeRequestEventListener();
-      sendResponse({message: "webRequest EventListener removed in background process."});
+      sendResponse({ message: "webRequest EventListener removed in background process." });
     }
   });
 
+
+
+function keepServiceRunning() {
+  // Call this function again in 5 minutes to keep service worker alive
+  setTimeout(keepServiceRunning, 300000);
+}
+
+
+keepServiceRunning();
 
 
 function loadItemsFromStorage() {
@@ -405,7 +398,7 @@ function loadItemsFromStorage() {
     ApplySessionDuration: 'yes',
     DebugLogs: 'no',
     RoleArns: {}
-  }, function(items) {
+  }, function (items) {
     FileName = items.FileName;
     if (items.ApplySessionDuration == "no") {
       ApplySessionDuration = false;
