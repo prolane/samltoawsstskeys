@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023-mar-20 (v3.3)
+* Option to set custom Session Duration
+
 ## 2022-dec-19 (v3.2)
 * Fix [#61](https://github.com/prolane/samltoawsstskeys/issues/61). Instead of using the aws http api directly for AssumeRoleWithSAML, this version switches to using the aws sdk. This is to fix processing large SAML Assertions.
 * Fix [#62](https://github.com/prolane/samltoawsstskeys/issues/62). When the IDP does not add a Session Duration as SAML Assertion Attribute, ignore and continue.
