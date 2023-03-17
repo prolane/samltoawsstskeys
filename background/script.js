@@ -6,6 +6,7 @@ importScripts(
 // Global variables
 let FileName = 'credentials';
 let ApplySessionDuration = true;
+let CustomSessionDuration = 3600;
 let DebugLogs = false;
 let RoleArns = {};
 let LF = '\n';
@@ -15,19 +16,19 @@ let LF = '\n';
 loadItemsFromStorage();
 // Additionaly on start of the background process it is checked if this extension can be activated
 chrome.storage.sync.get({
-    // The default is activated
-    Activated: true
-  }, function(item) {
-    if (item.Activated) addOnBeforeRequestEventListener();
+  // The default is activated
+  Activated: true
+}, function(item) {
+  if (item.Activated) addOnBeforeRequestEventListener();
 });
 // Additionally on start of the background process it is checked if a new version of the plugin is installed.
 // If so, show the user the changelog
 // var thisVersion = chrome.runtime.getManifest().version;
-chrome.runtime.onInstalled.addListener(function(details){
-  if(details.reason == "install" || details.reason == "update"){
+chrome.runtime.onInstalled.addListener(function(details) {
+  if (details.reason == "install" || details.reason == "update") {
     // Open a new tab to show changelog html page
-    chrome.tabs.create({url: "../options/changelog.html"});
-    }
+    chrome.tabs.create({ url: "../options/changelog.html" });
+  }
 });
 
 
@@ -41,7 +42,7 @@ function addOnBeforeRequestEventListener() {
   } else {
     chrome.webRequest.onBeforeRequest.addListener(
       onBeforeRequestEvent,
-      {urls: ["https://signin.aws.amazon.com/saml"]},
+      { urls: ["https://signin.aws.amazon.com/saml"] },
       ["requestBody"]
     );
     if (DebugLogs) console.log('DEBUG: onBeforeRequest Listener added');
@@ -73,10 +74,10 @@ async function onBeforeRequestEvent(details) {
     samlXmlDoc = decodeURIComponent(unescape(atob(details.requestBody.formData.SAMLResponse[0])));
   } else if (details.requestBody.raw) {
     let combined = new ArrayBuffer(0);
-    details.requestBody.raw.forEach(function(element) { 
-      let tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength); 
-      tmp.set( new Uint8Array(combined), 0 ); 
-      tmp.set( new Uint8Array(element.bytes),combined.byteLength ); 
+    details.requestBody.raw.forEach(function(element) {
+      let tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength);
+      tmp.set(new Uint8Array(combined), 0);
+      tmp.set(new Uint8Array(element.bytes), combined.byteLength);
       combined = tmp.buffer;
     });
     let combinedView = new DataView(combined);
@@ -138,14 +139,15 @@ async function onBeforeRequestEvent(details) {
     hasRoleIndex = roleIndex != undefined;
   }
 
-  // Only set the SessionDuration if it was supplied by the SAML provider and 
-  // when the user has configured to use this feature.
+  // Set the session duration to the value of CustomSessionDuration if:
+  // * session duration was not supplied in the SAML assertion
+  // * user configured to NOT use the session duration supplied in the SAML assertion
   if (typeof sessionduration === 'undefined' || !ApplySessionDuration) {
-    sessionduration = null
+    sessionduration = CustomSessionDuration
   }
 
   // Change newline sequence when client is on Windows
-  if (navigator.userAgent.indexOf('Windows')  !== -1) {
+  if (navigator.userAgent.indexOf('Windows') !== -1) {
     LF = '\r\n'
   }
 
@@ -376,37 +378,40 @@ function outputDocAsDownload(docContent) {
 // This Listener receives messages from options.js and popup.js
 // Received messages are meant to affect the background process.
 chrome.runtime.onMessage.addListener(
-  function(request, sender, sendResponse) {
+  function (request, sender, sendResponse) {
     // When the options are changed in the Options panel
     // these items need to be reloaded in this background process.
     if (request.action == "reloadStorageItems") {
       loadItemsFromStorage();
-      sendResponse({message: "Storage items reloaded in background process."});
+      sendResponse({ message: "Storage items reloaded in background process." });
     }
     // When the activation checkbox on the popup screen is checked/unchecked
     // the webRequest event listener needs to be added or removed.
     if (request.action == "addWebRequestEventListener") {
       if (DebugLogs) console.log('DEBUG: Extension enabled from popup');
       addOnBeforeRequestEventListener();
-      sendResponse({message: "webRequest EventListener added in background process."});
+      sendResponse({ message: "webRequest EventListener added in background process." });
     }
     if (request.action == "removeWebRequestEventListener") {
       if (DebugLogs) console.log('DEBUG: Extension disabled from popup');
       removeOnBeforeRequestEventListener();
-      sendResponse({message: "webRequest EventListener removed in background process."});
+      sendResponse({ message: "webRequest EventListener removed in background process." });
     }
   });
 
 
 
 function loadItemsFromStorage() {
+  //default values for the options
   chrome.storage.sync.get({
     FileName: 'credentials',
     ApplySessionDuration: 'yes',
+    CustomSessionDuration: '3600',
     DebugLogs: 'no',
     RoleArns: {}
-  }, function(items) {
+  }, function (items) {
     FileName = items.FileName;
+    CustomSessionDuration = items.CustomSessionDuration;
     if (items.ApplySessionDuration == "no") {
       ApplySessionDuration = false;
     } else {

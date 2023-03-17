@@ -21,6 +21,21 @@ div {
   background-color: #fef6e0;
 }
 
+#divCustomSessionDuration {
+  padding-left: 0px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  padding-right: 0px;
+}
+
+.element-visible {
+  display: block;
+}
+
+.element-hide {
+  display: none;
+}
+
 .setting-part {
   width: 876px;
   border-radius: 10px;
