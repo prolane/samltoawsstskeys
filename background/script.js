@@ -30,6 +30,8 @@ chrome.runtime.onInstalled.addListener(function(details) {
     chrome.tabs.create({ url: "../options/changelog.html" });
   }
 });
+// Keep the extensions service worker alive
+keepServiceRunning();
 
 
 
@@ -400,6 +402,14 @@ chrome.runtime.onMessage.addListener(
   });
 
 
+
+function keepServiceRunning() {
+    // Call this function every 20 seconds to keep service worker alive
+    if (DebugLogs) console.log('DEBUG: keepServiceRunning triggered');
+    setTimeout(keepServiceRunning, 20000);
+}
+  
+  
 
 function loadItemsFromStorage() {
   //default values for the options
