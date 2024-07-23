@@ -264,7 +264,7 @@ async function assumeRoleWithSAML(roleClaimValue, SAMLAssertion, SessionDuration
     RoleArn: RoleArn,
     SAMLAssertion: SAMLAssertion
   };
-  if (SessionDuration !== null) {
+  if (SessionDuration !== null && SessionDuration !== "") {
     params['DurationSeconds'] = SessionDuration;
   }
 
@@ -319,7 +319,7 @@ async function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey
     RoleArn: roleArn,
     RoleSessionName: roleSessionName
   };
-  if (SessionDuration !== null) {
+  if (SessionDuration !== null && SessionDuration !== "") {
     params['DurationSeconds'] = SessionDuration;
   }
   const command = new webpacksts.AWSAssumeRoleCommand(params);
