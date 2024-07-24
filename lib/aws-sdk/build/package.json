@@ -7,7 +7,8 @@
     "build": "webpack"
   },
   "dependencies": {
-    "@aws-sdk/client-sts": "3.209.0"
+    "@aws-sdk/client-sts": "^3.614.0",
+    "ini": "^4.1.3"
   },
   "devDependencies": {
     "path-browserify": "^1.0.1",

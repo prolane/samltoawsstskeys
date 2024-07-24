@@ -200,8 +200,7 @@ async function onBeforeRequestEvent(details) {
   try {
     keys = await assumeRoleWithSAML(attributes_role, SAMLAssertion, sessionduration);
     // Append AWS credentials keys as string to 'credentials' variable
-    credentials = addProfileToCredentials(credentials, "default", keys.access_key_id, 
-      keys.secret_access_key, keys.session_token)
+    credentials = addProfileToCredentials(credentials, "default", keys);
   }
   catch(err) {
     console.log("ERROR: Error when trying to assume the IAM Role with the SAML Assertion.");
@@ -213,17 +212,16 @@ async function onBeforeRequestEvent(details) {
   if (Object.keys(RoleArns).length > 0) {
     if (DebugLogs) console.log('DEBUG: Additional Role ARNs are configured');
     // Loop through each profile (each profile has a role ARN as value)
-    let profileList = Object.keys(RoleArns);
+    const profileList = Object.keys(RoleArns);
     for (let i = 0; i < profileList.length; i++) {
-      console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[i]] + 
-      " with profile name '" + profileList[i] + "'.");
+      const profileName = profileList[i];
+      const role = RoleArns[profileName];
+      console.log(`INFO: Do additional assume-role for role -> ${role} with profile name '${profileName}'.`);
       // Call AWS STS API to get credentials using Access Key ID and Secret Access Key as authentication
       try {
-        let result = await assumeRole(RoleArns[profileList[i]], profileList[i], keys.access_key_id,
-          keys.secret_access_key, keys.session_token, sessionduration);
+        const result = await assumeRole(role, profileName, keys, sessionduration);
         // Append AWS credentials keys as string to 'credentials' variable
-        credentials = addProfileToCredentials(credentials, profileList[i], result.access_key_id,
-          result.secret_access_key, result.session_token);
+        credentials = addProfileToCredentials(credentials, profileName, result);
       }
       catch(err) {
         console.log("ERROR: Error when trying to assume additional IAM Role.");
@@ -281,16 +279,11 @@ async function assumeRoleWithSAML(roleClaimValue, SAMLAssertion, SessionDuration
   try {
     const response = await client.send(command);
     console.log("INFO: AWSAssumeRoleWithSAMLCommand client.send is done!")
-    let keys = {
-      access_key_id: response.Credentials.AccessKeyId,
-      secret_access_key: response.Credentials.SecretAccessKey,
-      session_token: response.Credentials.SessionToken,
-    }
     if (DebugLogs) {
       console.log('DEBUG: AssumeRoleWithSAML response:');
-      console.log(keys);
+      console.log(JSON.stringify(response.Credentials));
     }
-    return keys;
+    return response.Credentials;
   }
   catch (error) {
     console.log(error)
@@ -301,10 +294,9 @@ async function assumeRoleWithSAML(roleClaimValue, SAMLAssertion, SessionDuration
 // Will fetch additional AWS credentials keys for 1 role
 // The assume-role API is called using the earlier fetched AWS credentials keys
 // (which where fetched using SAML) as authentication.
-async function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey,
-  SessionToken, SessionDuration) {
+async function assumeRole(roleArn, roleSessionName, { AccessKeyId, SecretAccessKey, SessionToken }, SessionDuration) {
   // Set the fetched STS keys from the SAML response as credentials for doing the API call
-  let clientconfig = {
+  const clientconfig = {
     region: 'us-east-1', // region is mandatory to specify, but ignored when using global endpoint
     useGlobalEndpoint: true,
     credentials: {
@@ -328,16 +320,11 @@ async function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey
   try {
     const response = await client.send(command);
     console.log("INFO: assumeRole client.send is done!")
-    let keys = {
-      access_key_id: response.Credentials.AccessKeyId,
-      secret_access_key: response.Credentials.SecretAccessKey,
-      session_token: response.Credentials.SessionToken,
-    }
     if (DebugLogs) {
       console.log('DEBUG: assumeRole response:');
-      console.log(keys);
+      console.log(JSON.stringify(response.Credentials));
     }
-    return keys
+    return response.Credentials;
   }
   catch (error) {
     console.log(error)
@@ -347,13 +334,24 @@ async function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey
 
 
 // Append AWS credentials profile to the existing content of a credentials file
-function addProfileToCredentials(credentials, profileName, AccessKeyId, SecretAcessKey, SessionToken) {
-  credentials += "[" + profileName + "]" + LF +
-  "aws_access_key_id=" + AccessKeyId + LF +
-  "aws_secret_access_key=" + SecretAcessKey + LF +
-  "aws_session_token=" + SessionToken + LF +
-  LF;
-  return credentials;
+function addProfileToCredentials(fileContent, section, { AccessKeyId, SecretAccessKey, SessionToken, Expiration } ) {
+  const config = webpacksts.IniLib.parse(fileContent);
+
+  if (config[section] == null) {
+    config[section] = {};
+  }
+
+  config[section]['aws_access_key_id'] = AccessKeyId;
+  config[section]['aws_secret_access_key'] = SecretAccessKey;
+  config[section]['aws_session_token'] = SessionToken;
+  config[section]['Expiration'] = Expiration.toString();
+
+  const isWindows = navigator.userAgent.indexOf('Windows') !== -1;
+  const content = webpacksts.IniLib.stringify(config,
+      {
+          platform: isWindows ? "win32" : "other"
+      });
+  return content;
 }
 
 
