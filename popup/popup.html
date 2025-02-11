@@ -4,7 +4,7 @@
     <title>SAML to AWS STS Keys Converter</title>
     <style>
     div.status {
-        width:200px;
+        width:400px;
     }
     .options{
       font-size: 14px;
@@ -29,9 +29,11 @@
   </head>
 
   <body>
-
     <div class="status">
       <h3>SAML to AWS STS Keys</h3>
+      <span class="options" id="latestRoleName"></span>
+      <span class="options" id="latestRoleAge"></span>
+      <br />
       <label class="options">Activated:</label><input type="checkbox" id="chkboxactivated"></input>
     <br />
     <a href="../options/options.html" target="_blank" class="button">

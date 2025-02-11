@@ -5,7 +5,7 @@
 // On load of popup
 document.addEventListener('DOMContentLoaded', function() {
   // On load of the popup screen check in Chrome's storage if the
-  // 'SAML to AWS STS Keys' function is in a activated state or not.
+  // 'SAML to AWS STS Keys' function is in an activated state or not.
   // Default value is 'activated'
   chrome.storage.sync.get({
     Activated: true
@@ -13,11 +13,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('chkboxactivated').checked = items.Activated;
   });
 
-  // Add event handler to checkbox
-  document.getElementById('chkboxactivated').addEventListener('change', chkboxChangeHandler);
+ // Load the last saved status from local storage, if available.
+ chrome.storage.local.get(["lastRole", "lastTimestamp"], function(items){
+     if(items.lastRole && items.lastTimestamp) {
+        updatePopupStatus(items.lastRole, items.lastTimestamp);
+     }
+ });
 });
-
-
 
 function chkboxChangeHandler(event) {
   var checkbox = event.target;
@@ -33,4 +35,21 @@ function chkboxChangeHandler(event) {
   chrome.runtime.sendMessage({action: action}, function(response) {
     console.log(response.message);
   });
+}
+
+// Listen for status update messages from the background
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+ if (message.action === "updateStatus") {
+     updatePopupStatus(message.latestRole, message.timestamp);
+ }
+});
+
+// Update the status section in the popup with the latest role ARN and the "age"
+function updatePopupStatus(latestRole, timestamp) {
+   let latestRoleName = document.getElementById('latestRoleName');
+   let latestRoleAge = document.getElementById('latestRoleAge');
+   // Compute the age (in seconds) since the status was updated
+   let ageSeconds = Math.floor((Date.now() - timestamp) / 1000);
+   latestRoleName.innerHTML = "Role:" + latestRole + "<br>";
+   latestRoleAge.innerHTML = "Age:" + ageSeconds + " sec<br>";
 }

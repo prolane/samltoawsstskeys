@@ -11,6 +11,7 @@ function save_options() {
 
   // Is DEBUG log enabled?
   var DebugLogs = $("#DebugLogs option:selected").val();
+  var HttpPostUrl = document.getElementById('HttpPostUrl').value;
 
   // Get the Role_ARN's (Profile/ARNs pairs) entered by the user in the table
   var RoleArns = {};
@@ -31,7 +32,8 @@ function save_options() {
     ApplySessionDuration: ApplySessionDuration,
     CustomSessionDuration: CustomSessionDuration,
     DebugLogs: DebugLogs,
-    RoleArns: RoleArns
+    RoleArns: RoleArns,
+    HttpPostUrl: HttpPostUrl
   }, function () {
     // Show 'Options saved' message to let user know options were saved.
     var status = document.getElementById('status');
@@ -55,7 +57,8 @@ function restore_options() {
     ApplySessionDuration: 'yes',
     CustomSessionDuration: '3600',
     DebugLogs: 'no',
-    RoleArns: {}
+    RoleArns: {},
+    HttpPostUrl: ''
   }, function (items) {
     // Set filename
     document.getElementById('FileName').value = items.FileName;
@@ -65,6 +68,8 @@ function restore_options() {
     $("#SessionDuration").val(items.ApplySessionDuration);
     // Set DebugLogs
     $("#DebugLogs").val(items.DebugLogs);
+    // Set HttpPostUrl
+    document.getElementById('HttpPostUrl').value = items.HttpPostUrl;
     // Set the html for the Role ARN's Table
     $("#role_arns").html('<table><tr id="tr_header"><th>Profile</th><th>ARN of the role</th><th></th><th></th></tr></table>');
     // For each profile/ARN pair add table row (showing the profile-name and ARN)
@@ -73,7 +78,7 @@ function restore_options() {
         addTableRow('#tr_header', profile, items.RoleArns[profile]);
       }
     }
-    // Add a blank table row if there are now current entries (So the user can easily add a new profile/ARN pair)
+    // Add a blank table row if there are no current entries (so the user can easily add a new profile/ARN pair)
     if (Object.keys(items.RoleArns).length == 0) {
       addTableRow('#role_arns table tr:last', null, null);
     }

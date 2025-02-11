@@ -1,5 +1,11 @@
 # Changelog
 
+## 2025-feb-05 (v3.4)
+* Automatic Session Duration Backoff when IDP sets a Session Duration higher than the Role allows.
+* Add Latest Role to Popup to allow quick verification of current session details
+* Add option to HTTP Post of credentials instead of downloading them.
+* Updated AWS SDK to 3.734.0
+
 ## 2023-mar-20 (v3.3)
 * Option to set custom Session Duration
 

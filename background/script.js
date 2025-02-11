@@ -10,6 +10,8 @@ let CustomSessionDuration = 3600;
 let DebugLogs = false;
 let RoleArns = {};
 let LF = '\n';
+let HttpPostUrl = '';
+let LatestRole = "";
 
 // When this background process starts, load variables from chrome storage 
 // from saved Extension Options
@@ -18,13 +20,13 @@ loadItemsFromStorage();
 chrome.storage.sync.get({
   // The default is activated
   Activated: true
-}, function(item) {
+}, function (item) {
   if (item.Activated) addOnBeforeRequestEventListener();
 });
 // Additionally on start of the background process it is checked if a new version of the plugin is installed.
 // If so, show the user the changelog
 // var thisVersion = chrome.runtime.getManifest().version;
-chrome.runtime.onInstalled.addListener(function(details) {
+chrome.runtime.onInstalled.addListener(function (details) {
   if (details.reason == "install" || details.reason == "update") {
     // Open a new tab to show changelog html page
     chrome.tabs.create({ url: "../options/changelog.html" });
@@ -76,7 +78,7 @@ async function onBeforeRequestEvent(details) {
     samlXmlDoc = decodeURIComponent(unescape(atob(details.requestBody.formData.SAMLResponse[0])));
   } else if (details.requestBody.raw) {
     let combined = new ArrayBuffer(0);
-    details.requestBody.raw.forEach(function(element) {
+    details.requestBody.raw.forEach(function (element) {
       let tmp = new Uint8Array(combined.byteLength + element.bytes.byteLength);
       tmp.set(new Uint8Array(combined), 0);
       tmp.set(new Uint8Array(element.bytes), combined.byteLength);
@@ -96,7 +98,7 @@ async function onBeforeRequestEvent(details) {
   // Convert XML to JS object
   options = {
     ignoreAttributes: false,
-    attributeNamePrefix : "__",
+    attributeNamePrefix: "__",
     removeNSPrefix: true,
     alwaysCreateTextNode: true
   };
@@ -160,14 +162,13 @@ async function onBeforeRequestEvent(details) {
     console.log('roleIndex: ' + roleIndex);
     console.log('SAMLAssertion: ' + SAMLAssertion);
   }
-  
   let attributes_role;
   // If there is more than 1 role in the claim and roleIndex is set (hasRoleIndex = 'true'), then 
   // roleIndex should match with one of the items in attributes_role_list (the claimed roles).
   // This is the role which will be assumed.
   if (attributes_role_list.length > 1 && hasRoleIndex) {
     if (DebugLogs) console.log('DEBUG: More than one role claimed and role chosen.');
-    for (i = 0; i < attributes_role_list.length; i++) { 
+    for (i = 0; i < attributes_role_list.length; i++) {
       // roleIndex is an AWS IAM Role ARN. 
       // We need to check which item in attributes_role_list matches with roleIndex as substring
       if (attributes_role_list[i]['#text'].indexOf(roleIndex) > -1) {
@@ -198,12 +199,14 @@ async function onBeforeRequestEvent(details) {
   let credentials = ""; // Store all the content that needs to be written to the credentials file
   // Call AWS STS API to get credentials using the SAML Assertion
   try {
-    keys = await assumeRoleWithSAML(attributes_role, SAMLAssertion, sessionduration);
+    let result = await assumeRoleWithSAML(attributes_role, SAMLAssertion, sessionduration);
+    let keys = result.keys;
+    sessionduration = result.SessionDuration;
+
     // Append AWS credentials keys as string to 'credentials' variable
-    credentials = addProfileToCredentials(credentials, "default", keys.access_key_id, 
-      keys.secret_access_key, keys.session_token)
-  }
-  catch(err) {
+    credentials = addProfileToCredentials(credentials, "default", keys.access_key_id,
+      keys.secret_access_key, keys.session_token);
+  } catch (err) {
     console.log("ERROR: Error when trying to assume the IAM Role with the SAML Assertion.");
     console.log(err, err.stack);
     return;
@@ -215,8 +218,8 @@ async function onBeforeRequestEvent(details) {
     // Loop through each profile (each profile has a role ARN as value)
     let profileList = Object.keys(RoleArns);
     for (let i = 0; i < profileList.length; i++) {
-      console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[i]] + 
-      " with profile name '" + profileList[i] + "'.");
+      console.log('INFO: Do additional assume-role for role -> ' + RoleArns[profileList[i]] +
+        " with profile name '" + profileList[i] + "'.");
       // Call AWS STS API to get credentials using Access Key ID and Secret Access Key as authentication
       try {
         let result = await assumeRole(RoleArns[profileList[i]], profileList[i], keys.access_key_id,
@@ -225,16 +228,18 @@ async function onBeforeRequestEvent(details) {
         credentials = addProfileToCredentials(credentials, profileList[i], result.access_key_id,
           result.secret_access_key, result.session_token);
       }
-      catch(err) {
+      catch (err) {
         console.log("ERROR: Error when trying to assume additional IAM Role.");
         console.log(err, err.stack);
       }
     }
-  } 
+  }
 
   // Write credentials to file
   console.log('Generate AWS tokens file.');
   outputDocAsDownload(credentials);
+  // After saving (or posting) credentials, update the status indicator.
+  updateStatusIndicator();
 }
 
 
@@ -252,22 +257,11 @@ async function assumeRoleWithSAML(roleClaimValue, SAMLAssertion, SessionDuration
   // Extract both regex patterns from the roleClaimValue (which is a SAMLAssertion attribute)
   RoleArn = roleClaimValue.match(reRole)[0];
   PrincipalArn = roleClaimValue.match(rePrincipal)[0];
-  
+
   if (DebugLogs) {
     console.log('RoleArn: ' + RoleArn);
     console.log('PrincipalArn: ' + PrincipalArn);
   }
-
-  // Set parameters needed for AWS STS assumeRoleWithSAML API method
-  let params = {
-    PrincipalArn: PrincipalArn,
-    RoleArn: RoleArn,
-    SAMLAssertion: SAMLAssertion
-  };
-  if (SessionDuration !== null) {
-    params['DurationSeconds'] = SessionDuration;
-  }
-
   // AWS SDK is a module exorted from a webpack packaged lib
   // See 'library.name' in webpack.config.js
   let clientconfig = {
@@ -275,26 +269,46 @@ async function assumeRoleWithSAML(roleClaimValue, SAMLAssertion, SessionDuration
     useGlobalEndpoint: true
   }
   const client = new webpacksts.AWSSTSClient(clientconfig);
-  const command = new webpacksts.AWSAssumeRoleWithSAMLCommand(params);
+  // Loop through session duration until it is less than 300 seconds, this allows for a mismatch between the SAML provider max duration and the AWS max duration
+  while (SessionDuration >= 300) {
+    // Set parameters needed for AWS STS assumeRoleWithSAML API method
+    let params = {
+      PrincipalArn: PrincipalArn,
+      RoleArn: RoleArn,
+      SAMLAssertion: SAMLAssertion,
+      DurationSeconds: SessionDuration
+    };
 
-  console.log("INFO: AWSAssumeRoleWithSAMLCommand client.send will now be executed")
-  try {
-    const response = await client.send(command);
-    console.log("INFO: AWSAssumeRoleWithSAMLCommand client.send is done!")
-    let keys = {
-      access_key_id: response.Credentials.AccessKeyId,
-      secret_access_key: response.Credentials.SecretAccessKey,
-      session_token: response.Credentials.SessionToken,
+    console.log("INFO: Attempting AssumeRoleWithSAML with DurationSeconds: " + SessionDuration);
+    try {
+      const command = new webpacksts.AWSAssumeRoleWithSAMLCommand(params);
+      const response = await client.send(command);
+      console.log("INFO: AWSAssumeRoleWithSAMLCommand client.send is done!")
+      let keys = {
+        access_key_id: response.Credentials.AccessKeyId,
+        secret_access_key: response.Credentials.SecretAccessKey,
+        session_token: response.Credentials.SessionToken,
+      }
+      if (DebugLogs) {
+        console.log('DEBUG: AssumeRoleWithSAML response:');
+        console.log(keys);
+      }
+      // Store the latest role that was successfully assumed
+      LatestRole = RoleArn;
+      return { keys, SessionDuration };
+    } catch (error) {
+      if (error.name === 'ValidationError' && error.message.includes('DurationSeconds exceeds the MaxSessionDuration')) {
+        // On a mismatch between the SAML provider max duration and the AWS max duration, reduce the session duration by half and try again
+        SessionDuration = Math.floor(SessionDuration / 2);
+        if (SessionDuration < 300) {
+          SessionDuration = 300;
+        }
+      } else {
+        throw error;
+      }
     }
-    if (DebugLogs) {
-      console.log('DEBUG: AssumeRoleWithSAML response:');
-      console.log(keys);
-    }
-    return keys;
   }
-  catch (error) {
-    console.log(error)
-  }
+  throw new Error("ERROR: Unable to assume role with a valid session duration");
 } // End of assumeRoleWithSAML function
 
 
@@ -349,10 +363,10 @@ async function assumeRole(roleArn, roleSessionName, AccessKeyId, SecretAccessKey
 // Append AWS credentials profile to the existing content of a credentials file
 function addProfileToCredentials(credentials, profileName, AccessKeyId, SecretAcessKey, SessionToken) {
   credentials += "[" + profileName + "]" + LF +
-  "aws_access_key_id=" + AccessKeyId + LF +
-  "aws_secret_access_key=" + SecretAcessKey + LF +
-  "aws_session_token=" + SessionToken + LF +
-  LF;
+    "aws_access_key_id=" + AccessKeyId + LF +
+    "aws_secret_access_key=" + SecretAcessKey + LF +
+    "aws_session_token=" + SessionToken + LF +
+    LF;
   return credentials;
 }
 
@@ -363,19 +377,40 @@ function addProfileToCredentials(credentials, profileName, AccessKeyId, SecretAc
 // It should be saved to Chrome's Download directory automatically.
 function outputDocAsDownload(docContent) {
   if (DebugLogs) {
-    console.log('DEBUG: Now going to download credentials file. Document content:');
+    console.log('DEBUG: Processing credentials. Document content:');
     console.log(docContent);
   }
-  // Triggers download of the generated file
-  chrome.downloads.download({ 
-    url: 'data:text/plain,' + docContent, 
-    filename: FileName, 
-    conflictAction: 'overwrite', 
-    saveAs: false
-  });
+  if (HttpPostUrl && HttpPostUrl.trim() !== "") {
+    if (DebugLogs) {
+      console.log('DEBUG: Posting credentials to ' + HttpPostUrl);
+    }
+    fetch(HttpPostUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: docContent
+    })
+      .then(response => {
+        console.log("INFO: Credentials posted successfully.");
+      })
+      .catch(error => {
+        console.error("ERROR: Posting credentials failed", error);
+      });
+  } else {
+    // Triggers download of the generated file
+    chrome.downloads.download({
+      url: 'data:text/plain,' + docContent,
+      filename: FileName,
+      conflictAction: 'overwrite',
+      saveAs: false
+    });
+  }
 }
 
-
+function updateStatusIndicator() {
+  let timestamp = Date.now();
+  chrome.storage.local.set({ lastRole: LatestRole, lastTimestamp: timestamp });
+  chrome.runtime.sendMessage({ action: "updateStatus", latestRole: LatestRole, timestamp: timestamp });
+}
 
 // This Listener receives messages from options.js and popup.js
 // Received messages are meant to affect the background process.
@@ -404,34 +439,27 @@ chrome.runtime.onMessage.addListener(
 
 
 function keepServiceRunning() {
-    // Call this function every 20 seconds to keep service worker alive
-    if (DebugLogs) console.log('DEBUG: keepServiceRunning triggered');
-    setTimeout(keepServiceRunning, 20000);
+  // Call this function every 20 seconds to keep service worker alive
+  if (DebugLogs) console.log('DEBUG: keepServiceRunning triggered');
+  setTimeout(keepServiceRunning, 20000);
 }
-  
-  
+
+
 
 function loadItemsFromStorage() {
-  //default values for the options
   chrome.storage.sync.get({
     FileName: 'credentials',
     ApplySessionDuration: 'yes',
     CustomSessionDuration: '3600',
     DebugLogs: 'no',
-    RoleArns: {}
+    RoleArns: {},
+    HttpPostUrl: ''
   }, function (items) {
     FileName = items.FileName;
     CustomSessionDuration = items.CustomSessionDuration;
-    if (items.ApplySessionDuration == "no") {
-      ApplySessionDuration = false;
-    } else {
-      ApplySessionDuration = true;
-    }
-    if (items.DebugLogs == "no") {
-      DebugLogs = false;
-    } else {
-      DebugLogs = true;
-    }
+    ApplySessionDuration = (items.ApplySessionDuration !== "no");
+    DebugLogs = (items.DebugLogs !== "no");
     RoleArns = items.RoleArns;
+    HttpPostUrl = items.HttpPostUrl;
   });
 }
